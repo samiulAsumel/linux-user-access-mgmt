@@ -295,13 +295,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const showScript = (script) => {
       codeTitle.textContent = script.name;
-      codePath.textContent  = script.path;
+      const lineCount = (script.code.match(/\n/g) || []).length + 1;
+      codePath.textContent  = `${script.path}  ·  ${lineCount} lines`;
       // Apply syntax highlighting for bash scripts
       if (script.path.endsWith('.sh')) {
         codeDisplay.innerHTML = highlightBash(script.code);
       } else {
         codeDisplay.textContent = script.code;
       }
+      // Scroll code panel back to top on each switch
+      const panel = codeDisplay.closest('.script-code-body');
+      if (panel) panel.scrollTop = 0;
     };
 
     const activateBtn = (btn, script) => {
@@ -326,12 +330,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const badgeHTML = script.badges.map(b =>
         `<span class="script-badge badge-${b}">${b}</span>`
       ).join('');
+      const lineCount = (script.code.match(/\n/g) || []).length + 1;
 
       btn.innerHTML = `
         <div class="script-btn-info">
           <div class="script-btn-name">${script.name}</div>
           <div class="script-btn-desc">${script.description}</div>
-          <div class="script-btn-badges">${badgeHTML}</div>
+          <div class="script-btn-badges">
+            ${badgeHTML}
+            <span class="script-badge badge-lines">${lineCount}L</span>
+          </div>
         </div>`;
 
       btn.addEventListener('click', () => activateBtn(btn, script));
