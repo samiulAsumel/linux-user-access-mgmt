@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="description" content="Production-grade Linux user & access management automation for RHEL 9. CSV-driven bulk creation, account disabling, SSH key deployment, and HTML audit reports."/>
+  <meta name="theme-color" content="#030810"/>
+  <meta property="og:title" content="Linux User & Access Management Automation — RHEL 9"/>
+  <meta property="og:description" content="8 production Bash modules. Bulk user creation from CSV. Account disable/delete. SSH key management. Weekly HTML audit reports."/>
+  <meta property="og:type" content="website"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <title>Linux User & Access Management Automation</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<div id="progress-bar" aria-hidden="true"></div>
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<!-- ══════════════════════════ HEADER ══════════════════════════════════════ -->
+<header id="site-header">
+  <div class="header-brand">
+    <svg class="brand-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+      <path d="M10 2L3 5v6c0 4.5 3 8 7 9 4-1 7-4.5 7-9V5L10 2z" stroke="currentColor" stroke-width="1.4" fill="rgba(6,182,212,0.08)"/>
+      <circle cx="10" cy="8.5" r="2.2" stroke="currentColor" stroke-width="1.3" fill="none"/>
+      <path d="M6.5 15c0-1.93 1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+    </svg>
+    <span>USER<span class="brand-sep">/</span>MGMT</span>
+  </div>
+
+  <nav class="header-nav" id="header-nav" aria-label="Main navigation">
+    <a class="nav-link" href="#install">Install</a>
+    <a class="nav-link" href="#architecture">Architecture</a>
+    <a class="nav-link" href="#scripts">Scripts</a>
+    <a class="nav-link" href="#playground">Playground</a>
+    <a class="nav-link" href="#audit">Audit</a>
+  </nav>
+
+  <div class="header-right">
+    <div class="header-status">
+      <span class="status-dot status-cyan" aria-hidden="true"></span>
+      <span class="status-label">8 Modules</span>
+    </div>
+    <a class="gh-btn" href="https://github.com/samiulAsumel/linux-user-access-mgmt" target="_blank" rel="noopener noreferrer" aria-label="View on GitHub">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.202 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
+      </svg>
+      GitHub
+    </a>
+    <button class="hamburger" id="hamburger" aria-label="Toggle navigation" aria-expanded="false" aria-controls="header-nav">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<div class="mobile-nav-overlay" id="mobile-nav-overlay" aria-hidden="true">
+  <a class="mnav-link" href="#install">Install</a>
+  <a class="mnav-link" href="#architecture">Architecture</a>
+  <a class="mnav-link" href="#scripts">Scripts</a>
+  <a class="mnav-link" href="#playground">Playground</a>
+  <a class="mnav-link" href="#audit">Audit</a>
+</div>
+
+<main id="main-content">
+
+<!-- ══════════════════════════ HERO ════════════════════════════════════════ -->
+<section id="hero" aria-label="Hero">
+  <div class="hero-bg-grid" aria-hidden="true"></div>
+  <div class="hero-bg-glow" aria-hidden="true"></div>
+
+  <div class="hero-inner">
+    <div class="hero-left">
+      <div class="hero-eyebrow">
+        <span class="hero-eyebrow-dot" aria-hidden="true"></span>
+        RHEL 9 · CentOS Stream · Rocky Linux
+      </div>
+      <h1 class="hero-title">
+        Linux User<br/>
+        <span>&amp; Access</span><br/>
+        Management
+      </h1>
+      <p class="hero-desc">
+        8 production Bash modules. CSV-driven bulk user creation, account lifecycle management,
+        SSH key deployment, and weekly HTML audit reports.
+        <strong>30 minutes → 30 seconds per user.</strong>
+      </p>
+      <div class="hero-ctas">
+        <a href="#install" class="cta-primary">
+          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M10 2a1 1 0 011 1v9.586l2.293-2.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 111.414-1.414L9 12.586V3a1 1 0 011-1z"/><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/></svg>
+          Install in 60 seconds
+        </a>
+        <a href="#scripts" class="cta-secondary">Explore all 8 modules →</a>
+      </div>
+      <div class="hero-badges" role="list">
+        <span class="hero-badge" role="listitem">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="4"/></svg>
+          CSV-Driven
+        </span>
+        <span class="hero-badge" role="listitem">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="4"/></svg>
+          Dry-Run Mode
+        </span>
+        <span class="hero-badge" role="listitem">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="4"/></svg>
+          Audit Logged
+        </span>
+        <span class="hero-badge" role="listitem">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="4"/></svg>
+          SSH Keys
+        </span>
+        <span class="hero-badge" role="listitem">
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="4"/></svg>
+          HTML Reports
+        </span>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <div class="hero-terminal" role="region" aria-label="Live terminal animation">
+        <div class="term-titlebar">
+          <div class="term-dots" aria-hidden="true">
+            <span class="term-dot term-dot-r"></span>
+            <span class="term-dot term-dot-y"></span>
+            <span class="term-dot term-dot-g"></span>
+          </div>
+          <span class="term-title">user_manager.sh — root@prod-server-01</span>
+        </div>
+        <div class="term-body" id="hero-term" aria-live="polite" aria-label="User management output"></div>
+      </div>
+      <div class="hero-stats-row">
+        <div class="hstat">
+          <div class="hstat-val">8</div>
+          <div class="hstat-label">Modules</div>
+        </div>
+        <div class="hstat">
+          <div class="hstat-val">30s</div>
+          <div class="hstat-label">Per User</div>
+        </div>
+        <div class="hstat">
+          <div class="hstat-val">0</div>
+          <div class="hstat-label">Manual Work</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ STATS BAR ═══════════════════════════════════ -->
+<div id="stats-bar" role="region" aria-label="Project statistics">
+  <div class="stats-bar-inner">
+    <div class="stat-item"><div class="stat-num">8</div><div class="stat-label">Bash Modules</div></div>
+    <div class="stat-item"><div class="stat-num">CSV</div><div class="stat-label">Manifest-Driven</div></div>
+    <div class="stat-item"><div class="stat-num">100%</div><div class="stat-label">Audit Logged</div></div>
+    <div class="stat-item"><div class="stat-num">RHEL 9</div><div class="stat-label">Production Target</div></div>
+    <div class="stat-item"><div class="stat-num">ACL</div><div class="stat-label">POSIX Permissions</div></div>
+    <div class="stat-item"><div class="stat-num">HTML</div><div class="stat-label">Audit Reports</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ PAIN → SOLUTION → ROI ══════════════════════ -->
+<section class="section" aria-labelledby="roi-heading">
+  <div class="section-inner">
+    <p class="section-label">Business Case</p>
+    <h2 class="section-heading" id="roi-heading">Pain → Solution → ROI</h2>
+    <p class="section-sub">The real cost of manual user management — and how automation eliminates it.</p>
+
+    <div class="roi-grid">
+      <div class="roi-card">
+        <div class="roi-label pain">⚠ The Pain</div>
+        <h3>Manual Process Hell</h3>
+        <div class="roi-item"><span class="roi-dot pain-dot"></span><span>30 minutes per new employee onboarded</span></div>
+        <div class="roi-item"><span class="roi-dot pain-dot"></span><span>10 new hires = <span class="roi-highlight">5 hours of IT time</span></span></div>
+        <div class="roi-item"><span class="roi-dot pain-dot"></span><span>Forgotten account disabling = <span class="roi-highlight">security breach</span></span></div>
+        <div class="roi-item"><span class="roi-dot pain-dot"></span><span>Audit question: "Who has access?" — <span class="roi-highlight">nobody knows</span></span></div>
+        <div class="roi-item"><span class="roi-dot pain-dot"></span><span>Inconsistent password policies per admin</span></div>
+      </div>
+      <div class="roi-card">
+        <div class="roi-label sol">→ The Solution</div>
+        <h3>One Command, Done</h3>
+        <div class="roi-item"><span class="roi-dot sol-dot"></span><span>CSV file → one command → all accounts created</span></div>
+        <div class="roi-item"><span class="roi-dot sol-dot"></span><span>Correct groups, passwords, SSH keys, expiry</span></div>
+        <div class="roi-item"><span class="roi-dot sol-dot"></span><span>Employee leaves → one command → all access revoked</span></div>
+        <div class="roi-item"><span class="roi-dot sol-dot"></span><span>Weekly HTML audit report auto-generated</span></div>
+        <div class="roi-item"><span class="roi-dot sol-dot"></span><span>Dry-run mode for safe testing before execution</span></div>
+      </div>
+      <div class="roi-card">
+        <div class="roi-label roi-c">✓ The ROI</div>
+        <h3>Measurable Returns</h3>
+        <div class="roi-item"><span class="roi-dot roi-dot"></span><span>User creation: <span class="roi-highlight">30 min → 30 seconds</span></span></div>
+        <div class="roi-item"><span class="roi-dot roi-dot"></span><span>Saves IT team <span class="roi-highlight">10–20 hours/month</span></span></div>
+        <div class="roi-item"><span class="roi-dot roi-dot"></span><span>Zero forgotten account disabling</span></div>
+        <div class="roi-item"><span class="roi-dot roi-dot"></span><span>Audit-ready access reports always available</span></div>
+        <div class="roi-item"><span class="roi-dot roi-dot"></span><span>Security breach prevention = <span class="roi-highlight">priceless</span></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ QUICK INSTALL ═══════════════════════════════ -->
+<section class="section" id="install" aria-labelledby="install-heading">
+  <div class="section-inner">
+    <p class="section-label">Quick Start</p>
+    <h2 class="section-heading" id="install-heading">Up and running in 60 seconds</h2>
+    <p class="section-sub">Clone the repo, edit config.conf with your settings, then run the installer as root.</p>
+
+    <div class="install-steps">
+      <div class="install-row">
+        <span class="install-step-num">01 / CLONE</span>
+        <div class="install-cmd">
+          <code id="cmd-clone">git clone https://github.com/samiulAsumel/linux-user-access-mgmt.git</code>
+          <button class="copy-btn" data-copy="cmd-clone" aria-label="Copy clone command">COPY</button>
+        </div>
+      </div>
+      <div class="install-row">
+        <span class="install-step-num">02 / CONFIG</span>
+        <div class="install-cmd">
+          <code id="cmd-config">nano linux-user-access-mgmt/config.conf</code>
+          <button class="copy-btn" data-copy="cmd-config" aria-label="Copy config command">COPY</button>
+        </div>
+      </div>
+      <div class="install-row">
+        <span class="install-step-num">03 / INSTALL</span>
+        <div class="install-cmd">
+          <code id="cmd-install">sudo bash linux-user-access-mgmt/install.sh</code>
+          <button class="copy-btn" data-copy="cmd-install" aria-label="Copy install command">COPY</button>
+        </div>
+      </div>
+      <div class="install-row">
+        <span class="install-step-num">04 / RUN</span>
+        <div class="install-cmd">
+          <code id="cmd-run">sudo user_manager</code>
+          <button class="copy-btn" data-copy="cmd-run" aria-label="Copy run command">COPY</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ ARCHITECTURE ════════════════════════════════ -->
+<section class="section" id="architecture" aria-labelledby="arch-heading">
+  <div class="section-inner">
+    <p class="section-label">Architecture</p>
+    <h2 class="section-heading" id="arch-heading">9-Step User Lifecycle Pipeline</h2>
+    <p class="section-sub">Every user creation runs 9 sequential steps — each validated, logged, and dry-run capable. From CSV to fully configured account in under 30 seconds.</p>
+
+    <div class="arch-pipeline" role="list">
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">01</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 6h12M4 10h8M4 14h10"/></svg>
+        <div class="arch-step-name">Parse CSV</div>
+        <div class="arch-step-desc">Validate header, skip blanks & comments, trim whitespace</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">02</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M10 7v3l2 2" stroke-linecap="round"/></svg>
+        <div class="arch-step-name">Validate Fields</div>
+        <div class="arch-step-desc">Username regex, shell in /etc/shells, date format check</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">03</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 6a4 4 0 100 8 4 4 0 000-8z"/><path d="M14 6l2 2-4 4"/></svg>
+        <div class="arch-step-name">Create Groups</div>
+        <div class="arch-step-desc">groupadd for any missing groups before user creation</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">04</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 18v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="10" cy="8" r="3"/></svg>
+        <div class="arch-step-name">useradd</div>
+        <div class="arch-step-desc">Create account with home dir, shell, GECOS, secondary groups</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">05</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="9" width="14" height="9" rx="1.5"/><path d="M7 9V6.5a3 3 0 016 0V9"/><circle cx="10" cy="13.5" r="1" fill="currentColor" stroke="none"/></svg>
+        <div class="arch-step-name">Set Password</div>
+        <div class="arch-step-desc">openssl rand 12-char password, chpasswd, force change on login</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">06</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 2l2 4h4l-3 3 1 4-4-2-4 2 1-4-3-3h4z"/></svg>
+        <div class="arch-step-name">Password Aging</div>
+        <div class="arch-step-desc">chage: min/max/warn/inactive days from config.conf</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">07</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 8h14M3 12h14M8 4l-4 12M12 4l4 12"/></svg>
+        <div class="arch-step-name">Set Expiry</div>
+        <div class="arch-step-desc">chage -E expiry_date if provided in CSV column</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">08</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 6h12M4 10h8M14 13l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="arch-step-name">Deploy SSH Key</div>
+        <div class="arch-step-desc">Validate & append public key to authorized_keys, chmod 700/600</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">09</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h7"/><path d="M15 13l2 2 3-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="arch-step-name">Log &amp; Report</div>
+        <div class="arch-step-desc">Append to /var/log/usermgmt.log, credential summary output</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ SCRIPTS EXPLORER ════════════════════════════ -->
+<section class="section" id="scripts" aria-labelledby="scripts-heading">
+  <div class="section-inner">
+    <p class="section-label">Script Reference</p>
+    <h2 class="section-heading" id="scripts-heading">All 8 modules — source included</h2>
+    <p class="section-sub">Browse every file in the system. Each module runs standalone with --dry-run support and full logging.</p>
+
+    <div class="scripts-layout">
+      <div class="scripts-sidebar">
+        <div class="script-list" id="script-list" role="tablist" aria-label="Script files"></div>
+      </div>
+      <div class="script-code-panel" role="tabpanel" aria-label="Script source code">
+        <div class="script-code-header">
+          <div>
+            <div class="script-code-title" id="code-title">user_manager.sh</div>
+            <div class="script-code-path" id="code-path">user_manager.sh</div>
+          </div>
+          <button class="script-code-copy" id="code-copy-btn" aria-label="Copy script source">COPY</button>
+        </div>
+        <div class="script-code-body">
+          <pre><code id="code-display"></code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ PLAYGROUND ══════════════════════════════════ -->
+<section class="section" id="playground" aria-labelledby="playground-heading">
+  <div class="section-inner">
+    <p class="section-label">Interactive Demo</p>
+    <h2 class="section-heading" id="playground-heading">Simulate user management operations</h2>
+    <p class="section-sub">Select an operation and parameters — watch the realistic terminal output. No real changes are made.</p>
+
+    <div class="playground-layout">
+      <div class="pg-controls">
+        <div class="pg-control-group">
+          <div class="pg-label">Operation</div>
+          <select class="pg-select" id="pg-operation" aria-label="Select operation">
+            <option value="create">Create Users (from CSV)</option>
+            <option value="disable">Disable User</option>
+            <option value="delete">Delete User</option>
+            <option value="audit">Generate Audit Report</option>
+            <option value="ssh">Deploy SSH Key</option>
+            <option value="expire">Check Expiring Accounts</option>
+          </select>
+        </div>
+        <div class="pg-control-group">
+          <div class="pg-label">Number of Users</div>
+          <select class="pg-select" id="pg-user-count" aria-label="Number of users">
+            <option value="3">3 users</option>
+            <option value="5" selected>5 users</option>
+            <option value="10">10 users</option>
+            <option value="20">20 users</option>
+          </select>
+        </div>
+        <div class="pg-control-group">
+          <div class="pg-label">Scenario</div>
+          <select class="pg-select" id="pg-scenario" aria-label="Scenario type">
+            <option value="success">All success</option>
+            <option value="mixed">Mixed (some failures)</option>
+            <option value="dryrun">Dry-run mode</option>
+          </select>
+        </div>
+        <div class="pg-control-group">
+          <div class="pg-label">Options</div>
+          <div class="pg-checkboxes">
+            <label class="pg-check-label">
+              <input type="checkbox" id="pg-ssh-keys" checked/>
+              Deploy SSH keys
+            </label>
+            <label class="pg-check-label">
+              <input type="checkbox" id="pg-expiry"/>
+              Set account expiry
+            </label>
+            <label class="pg-check-label">
+              <input type="checkbox" id="pg-notify"/>
+              Notify admin (email)
+            </label>
+          </div>
+        </div>
+        <button class="pg-btn pg-btn-run" id="pg-run-btn" aria-label="Run simulation">
+          ▶ Run Simulation
+        </button>
+        <button class="pg-btn pg-btn-clear" id="pg-clear-btn" aria-label="Clear output">
+          ✕ Clear
+        </button>
+      </div>
+
+      <div class="pg-terminal">
+        <div class="pg-term-bar">
+          <div class="pg-term-dots" aria-hidden="true">
+            <div class="pg-term-dot"></div>
+            <div class="pg-term-dot"></div>
+            <div class="pg-term-dot"></div>
+          </div>
+          <span class="pg-term-title" id="pg-term-title">user_manager.sh — ready</span>
+          <span class="pg-term-status status-idle" id="pg-status">IDLE</span>
+        </div>
+        <div class="pg-term-output" id="pg-output" aria-live="polite" aria-label="Simulation output">
+          <span class="tline-dim">  Select an operation and click Run Simulation</span><br/>
+          <span class="tline-dim">  to see realistic terminal output.</span><br/>
+          <br/>
+          <span class="tline-plain">  Available operations:</span><br/>
+          <span class="tline-ok">    ✔ create_users.sh    — bulk user creation from CSV</span><br/>
+          <span class="tline-ok">    ✔ disable_users.sh   — lock and expire accounts</span><br/>
+          <span class="tline-ok">    ✔ delete_users.sh    — permanent account removal</span><br/>
+          <span class="tline-ok">    ✔ audit_report.sh    — HTML access audit report</span><br/>
+          <span class="tline-ok">    ✔ ssh_key_manager.sh — deploy/rotate/revoke keys</span><br/>
+          <span class="tline-ok">    ✔ expire_accounts.sh — account expiry management</span><br/>
+          <br/>
+          <span class="tline-prompt">root@prod-server-01 # </span><span class="cursor-blink"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ AUDIT REPORT ════════════════════════════════ -->
+<section class="section" id="audit" aria-labelledby="audit-heading">
+  <div class="section-inner">
+    <p class="section-label">Audit &amp; Compliance</p>
+    <h2 class="section-heading" id="audit-heading">Weekly HTML audit report — always ready</h2>
+    <p class="section-sub">Auto-generated every Monday morning. Seven sections covering every access control concern an auditor would ask about.</p>
+
+    <div class="arch-pipeline" role="list" style="margin-top:36px; grid-template-columns: repeat(auto-fill, minmax(220px,1fr))">
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">§ 1</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 18v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="10" cy="8" r="3"/></svg>
+        <div class="arch-step-name">All Users</div>
+        <div class="arch-step-desc">Username, full name, UID, shell, groups, last login, lock status</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">§ 2</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 2L3 5v6c0 4.5 3 8 7 9 4-1 7-4.5 7-9V5L10 2z"/></svg>
+        <div class="arch-step-name">Sudo Users</div>
+        <div class="arch-step-desc">All wheel/sudo group members with their privilege level</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">§ 3</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z"/><path d="M10 6v4l3 3" stroke-linecap="round"/></svg>
+        <div class="arch-step-name">Expiring Soon</div>
+        <div class="arch-step-desc">Accounts expiring within 30 days — colour-coded urgency</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">§ 4</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 4h12v12H4z"/><path d="M4 10h12M10 4v12" stroke-linecap="round"/></svg>
+        <div class="arch-step-name">Inactive Accounts</div>
+        <div class="arch-step-desc">No login in 90+ days — ideal candidates for disabling</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">§ 5</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="8" cy="8" r="5"/><path d="M13 13l4 4" stroke-linecap="round"/></svg>
+        <div class="arch-step-name">Never Logged In</div>
+        <div class="arch-step-desc">Provisioned accounts with zero login activity</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">§ 6</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 8h14M3 12h14M8 4l-4 12M12 4l4 12"/></svg>
+        <div class="arch-step-name">Failed Logins</div>
+        <div class="arch-step-desc">Last 7 days SSH failures per user/IP via journalctl</div>
+      </div>
+      <div class="arch-step pre-reveal" role="listitem">
+        <div class="arch-step-num">§ 7</div>
+        <svg class="arch-step-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 6h12M4 10h8M4 14h6"/><path d="M15 13l2 2 3-3" stroke-linecap="round"/></svg>
+        <div class="arch-step-name">sudo Usage</div>
+        <div class="arch-step-desc">Last 50 sudo commands from journal or /var/log/secure</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ══════════════════════════ FOOTER ══════════════════════════════════════ -->
+<footer>
+  <div class="footer-brand">USER<span>/</span>MGMT</div>
+  <div class="footer-meta">
+    linux-user-access-mgmt v1.0.0 &nbsp;·&nbsp; RHEL 9 / Rocky Linux &nbsp;·&nbsp; MIT License
+  </div>
+  <div class="footer-links">
+    <a class="footer-link" href="https://github.com/samiulAsumel/linux-user-access-mgmt" target="_blank" rel="noopener">GitHub</a>
+    <a class="footer-link" href="templates/users_template.csv" download>CSV Template</a>
+    <a class="footer-link" href="#install">Install</a>
+  </div>
+</footer>
+
+<script src="scripts-data.js"></script>
+<script src="playground.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

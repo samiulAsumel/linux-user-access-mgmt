@@ -1,0 +1,32 @@
+# Linux User & Access Management Automation — .gitignore
+
+# Credentials and sensitive data (NEVER commit these)
+*.creds
+*.passwords
+*_creds_*
+ssh-keys/*.pub
+ssh-keys/*.pem
+ssh-keys/*.key
+!ssh-keys/.gitkeep
+
+# Logs
+*.log
+/var/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/settings.json
+*.swp
+*.swo
+*~
+.idea/
+
+# Test artifacts
+/tmp/usermgmt_*
+
+# Node / package managers (if any tooling is added)
+node_modules/
+package-lock.json

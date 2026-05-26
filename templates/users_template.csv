@@ -1,0 +1,7 @@
+username,full_name,email,department,groups,shell,expiry_date,ssh_key_file
+jsmith,John Smith,j.smith@company.com,IT,sudo:developers,/bin/bash,2026-12-31,jsmith.pub
+mrahman,Mehedi Rahman,m.rahman@company.com,Finance,finance:reports,/bin/bash,,
+acontractor,Alex Contractor,alex@vendor.com,Vendor,vendor-read,/bin/bash,2026-06-30,alex.pub
+lwilson,Laura Wilson,l.wilson@company.com,HR,hr-staff:reports,/bin/bash,,
+dkumar,Dev Kumar,d.kumar@company.com,Engineering,developers:docker,/bin/bash,,dkumar.pub
+scarroll,Sarah Carroll,s.carroll@company.com,DevOps,developers:sudo:docker,/bin/bash,2027-01-01,scarroll.pub
