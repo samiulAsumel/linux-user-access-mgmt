@@ -1,30 +1,37 @@
 #!/usr/bin/env bash
-# modules/audit_report.sh — Generate HTML access audit report
-# Usage: ./modules/audit_report.sh [--dry-run] [--output /path/report.html]
-# Sections: Active Users · Sudo Access · Expiring Accounts · Inactive ·
-#           Failed Logins · Never Logged In · sudo Usage Log
+# ============================================================
+# modules/audit_report.sh — HTML access audit report generator
+# Linux User & Access Management Automation  v1.0.0
+# Usage : ./modules/audit_report.sh [--dry-run] [--output FILE]
+# Sections: All Users · Sudo · Expiring · Inactive · Never-Login
+#           · Failed Logins · sudo Usage Log
+# ============================================================
 # shellcheck shell=bash
+# shellcheck source=../config.conf
 set -euo pipefail
 
 _ar_load_config() {
     local cfg
     cfg="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/config.conf"
+    # shellcheck disable=SC1091
     [[ -f "$cfg" ]] && source "$cfg"
 }
 [[ -z "${LOG_FILE:-}" ]] && _ar_load_config
 
 _ar_log() {
     local level="$1"; shift
-    local ts; ts=$(date '+%Y-%m-%d %H:%M:%S')
-    local msg="[$ts] [$level] [AUDIT_REPORT] $*"
-    echo "$msg"
-    echo "$msg" >> "${LOG_FILE:-/var/log/usermgmt.log}" 2>/dev/null || true
+    local ts msg
+    ts=$(date '+%Y-%m-%d %H:%M:%S')
+    msg="[$ts] [$level] [AUDIT_REPORT] $*"
+    printf '%s\n' "$msg"
+    printf '%s\n' "$msg" >> "${LOG_FILE:-/var/log/usermgmt.log}" 2>/dev/null || true
 }
 
-# ── HTML helpers ──────────────────────────────────────────────────────────────
+# ── HTML page header ──────────────────────────────────────────────────────────
 _ar_html_header() {
     local ts="$1"
-    local hostname; hostname=$(hostname -f 2>/dev/null || hostname)
+    local hostname
+    hostname=$(hostname -f 2>/dev/null || hostname)
     cat <<EOF
 <!DOCTYPE html>
 <html lang="en">
@@ -33,310 +40,369 @@ _ar_html_header() {
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>User Access Audit — ${hostname} — ${ts}</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:Inter,system-ui,sans-serif;background:#0a0b0e;color:#cdd6f4;line-height:1.5;padding:24px}
-  h1{font-size:22px;color:#89b4fa;margin-bottom:4px}
-  .meta{font-size:12px;color:#6c7086;margin-bottom:32px}
-  h2{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#89dceb;margin:28px 0 10px;padding:0 0 6px;border-bottom:1px solid #1e1e2e}
-  table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:13px}
-  th{background:#1e1e2e;color:#89b4fa;text-align:left;padding:8px 12px;font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
-  td{padding:7px 12px;border-bottom:1px solid #181825;color:#cdd6f4}
-  tr:hover td{background:#1e1e2e}
-  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
-  .badge-ok{background:rgba(166,227,161,.15);color:#a6e3a1}
-  .badge-warn{background:rgba(249,226,175,.15);color:#f9e2af}
-  .badge-err{background:rgba(243,139,168,.15);color:#f38ba8}
-  .badge-grey{background:rgba(108,112,134,.15);color:#6c7086}
-  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:28px}
-  .summary-card{background:#1e1e2e;border:1px solid #313244;border-radius:8px;padding:16px;text-align:center}
-  .summary-num{font-size:28px;font-weight:800;color:#89b4fa}
-  .summary-label{font-size:11px;color:#6c7086;margin-top:4px;text-transform:uppercase;letter-spacing:.06em}
-  .summary-card.warn .summary-num{color:#f9e2af}
-  .summary-card.err .summary-num{color:#f38ba8}
-  .summary-card.ok .summary-num{color:#a6e3a1}
-  footer{margin-top:40px;font-size:11px;color:#45475a;text-align:center}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:#0a0b0e;color:#cdd6f4;line-height:1.5;padding:24px 32px;max-width:1400px;margin:0 auto}
+h1{font-size:22px;color:#89b4fa;margin-bottom:4px}
+.meta{font-size:12px;color:#6c7086;margin-bottom:32px}
+h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#89dceb;margin:32px 0 10px;padding-bottom:6px;border-bottom:1px solid #1e1e2e}
+table{width:100%;border-collapse:collapse;margin-bottom:8px;font-size:13px}
+th{background:#1e1e2e;color:#89b4fa;text-align:left;padding:8px 12px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+td{padding:7px 12px;border-bottom:1px solid #181825;color:#cdd6f4;vertical-align:top}
+tr:hover td{background:#1e1e2e}
+code{font-family:'JetBrains Mono',monospace;font-size:12px;background:#1e1e2e;padding:1px 5px;border-radius:3px}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+.ok{background:rgba(166,227,161,.12);color:#a6e3a1;border:1px solid rgba(166,227,161,.25)}
+.warn{background:rgba(249,226,175,.12);color:#f9e2af;border:1px solid rgba(249,226,175,.25)}
+.err{background:rgba(243,139,168,.12);color:#f38ba8;border:1px solid rgba(243,139,168,.25)}
+.grey{background:rgba(108,112,134,.12);color:#6c7086;border:1px solid rgba(108,112,134,.25)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:32px}
+.card{background:#1e1e2e;border:1px solid #313244;border-radius:8px;padding:16px;text-align:center}
+.card-num{font-size:30px;font-weight:800;color:#89b4fa;line-height:1}
+.card-lbl{font-size:11px;color:#6c7086;margin-top:6px;text-transform:uppercase;letter-spacing:.06em}
+.card.c-warn .card-num{color:#f9e2af}
+.card.c-err  .card-num{color:#f38ba8}
+.card.c-ok   .card-num{color:#a6e3a1}
+.empty{text-align:center;color:#45475a;padding:20px;font-style:italic}
+footer{margin-top:48px;font-size:11px;color:#45475a;text-align:center;border-top:1px solid #1e1e2e;padding-top:16px}
 </style>
 </head>
 <body>
-<h1>🛡 Linux User Access Audit Report</h1>
-<div class="meta">Generated: ${ts} &nbsp;·&nbsp; Host: ${hostname} &nbsp;·&nbsp; By: ${SUDO_USER:-root} &nbsp;·&nbsp; linux-user-access-mgmt v1.0.0</div>
+<h1>&#x1F6E1; Linux User &amp; Access Management — Audit Report</h1>
+<div class="meta">
+  Generated: ${ts}&nbsp;&nbsp;·&nbsp;&nbsp;Host: ${hostname}&nbsp;&nbsp;·&nbsp;&nbsp;By: ${SUDO_USER:-root}&nbsp;&nbsp;·&nbsp;&nbsp;linux-user-access-mgmt v1.0.0
+</div>
 EOF
 }
 
 _ar_html_footer() {
-    cat <<EOF
+    cat <<'EOF'
 <footer>
-  Report generated by linux-user-access-mgmt v1.0.0 · $(date '+%Y-%m-%d %H:%M:%S UTC')
-  · Retain for compliance. Distribute only to authorized personnel.
+  Report generated by linux-user-access-mgmt v1.0.0 &nbsp;·&nbsp; Retain per compliance policy &nbsp;·&nbsp; Distribute to authorised personnel only
 </footer>
 </body>
 </html>
 EOF
 }
 
-# ── Gather data ───────────────────────────────────────────────────────────────
-_ar_get_last_login() {
+# ── Data helpers ──────────────────────────────────────────────────────────────
+_ar_last_login() {
     local username="$1"
-    local ll; ll=$(lastlog -u "$username" 2>/dev/null | tail -1)
-    if echo "$ll" | grep -q "Never logged in"; then
-        echo "Never"
+    local ll
+    ll=$(lastlog -u "$username" 2>/dev/null | tail -1)
+    if printf '%s' "$ll" | grep -q "Never logged in"; then
+        printf 'Never'
     else
-        echo "$ll" | awk '{print $4,$5,$6,$9}' | sed 's/^ *//'
+        printf '%s' "$ll" | awk '{print $4,$5,$6,$9}' | sed 's/^ *//'
     fi
 }
 
 _ar_days_since_login() {
     local username="$1"
-    local ll_epoch; ll_epoch=$(lastlog -u "$username" 2>/dev/null | tail -1 | awk '{print $5,$6,$7,$NF}')
-    if [[ -z "$ll_epoch" ]] || echo "$ll_epoch" | grep -q "Never"; then
-        echo "999"
-        return
+    local ll last_field
+    ll=$(lastlog -u "$username" 2>/dev/null | tail -1)
+    if printf '%s' "$ll" | grep -q "Never logged in"; then
+        printf '9999'; return
     fi
-    local ll_ts; ll_ts=$(date -d "$ll_epoch" +%s 2>/dev/null || echo "0")
-    local now; now=$(date +%s)
-    echo $(( (now - ll_ts) / 86400 ))
+    # Extract the year (last field) to detect "Never"
+    last_field=$(printf '%s' "$ll" | awk '{print $NF}')
+    if ! printf '%s' "$last_field" | grep -qE '^[0-9]{4}$'; then
+        printf '9999'; return
+    fi
+    local date_str ll_ts now_ts
+    date_str=$(printf '%s' "$ll" | awk '{print $5,$6,$7,$9}')
+    ll_ts=$(date -d "$date_str" +%s 2>/dev/null || printf '0')
+    now_ts=$(date +%s)
+    printf '%d' "$(( (now_ts - ll_ts) / 86400 ))"
 }
 
-_ar_check_expiry_days() {
+_ar_expiry_days_remaining() {
     local username="$1"
-    local expiry; expiry=$(chage -l "$username" 2>/dev/null | grep "Account expires" | awk -F': ' '{print $2}')
+    local expiry
+    expiry=$(chage -l "$username" 2>/dev/null | grep "Account expires" | awk -F': ' '{print $2}')
     if [[ -z "$expiry" || "$expiry" == "never" ]]; then
-        echo ""
-        return
+        printf ''; return
     fi
-    local exp_epoch; exp_epoch=$(date -d "$expiry" +%s 2>/dev/null || echo "")
-    [[ -z "$exp_epoch" ]] && { echo ""; return; }
-    local now; now=$(date +%s)
-    local days=$(( (exp_epoch - now) / 86400 ))
-    echo "$days"
+    local exp_epoch now
+    exp_epoch=$(date -d "$expiry" +%s 2>/dev/null || printf '')
+    [[ -z "$exp_epoch" ]] && { printf ''; return; }
+    now=$(date +%s)
+    printf '%d' "$(( ( exp_epoch - now ) / 86400 ))"
 }
 
-# ── Build the report ──────────────────────────────────────────────────────────
+# ── Build the HTML report ─────────────────────────────────────────────────────
 run_audit_report() {
     local output_file="${1:-}"
     local report_dir="${REPORT_OUTPUT_DIR:-/var/reports/usermgmt}"
-    local ts; ts=$(date '+%Y-%m-%d_%H-%M-%S')
 
-    [[ $EUID -eq 0 ]] || { echo "[ERROR] Must run as root" >&2; exit 1; }
+    [[ $EUID -eq 0 ]] || { printf '[ERROR] Must run as root\n' >&2; exit 1; }
 
     if [[ -z "$output_file" ]]; then
         mkdir -p "$report_dir"
         chmod 750 "$report_dir"
-        output_file="${report_dir}/audit_${ts}.html"
+        local ts_file
+        ts_file=$(date '+%Y-%m-%d_%H-%M-%S')
+        output_file="${report_dir}/audit_${ts_file}.html"
     fi
 
-    _ar_log "INFO" "━━━ Generating audit report: $output_file"
-
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        _ar_log "DRY" "Would generate audit report to: $output_file"
-        echo "[DRY-RUN] Audit report would be written to: $output_file"
+        _ar_log "DRY" "Would generate audit report → $output_file"
+        printf '[DRY-RUN] Report would be written to: %s\n' "$output_file"
         return 0
     fi
 
-    # Collect all regular users
-    local all_users=()
-    while IFS=: read -r username _ uid _ _ home shell; do
-        [[ $uid -lt "${SYSTEM_UID_MIN:-1000}" ]] && continue
+    _ar_log "INFO" "━━━ Generating audit report → $output_file"
+
+    # ── Collect regular users ──────────────────────────────────────────────────
+    local -a all_users=()
+    while IFS=: read -r username _ uid _ _ _home shell; do
+        [[ $uid -lt ${SYSTEM_UID_MIN:-1000} ]] && continue
         all_users+=("$username")
     done < /etc/passwd
 
     local total_users=${#all_users[@]}
-    local sudo_users=0
-    local expiring_soon=0
-    local inactive_count=0
-    local never_logged=0
-    local locked_count=0
+    local sudo_count=0 expiring_soon=0 inactive_count=0
+    local never_logged=0 locked_count=0
 
-    # Pre-scan for summary
     for u in "${all_users[@]}"; do
-        id -nG "$u" 2>/dev/null | grep -qwE "wheel|sudo" && sudo_users=$((sudo_users+1))
-        local days_til_exp; days_til_exp=$(_ar_check_expiry_days "$u")
-        [[ -n "$days_til_exp" ]] && [[ "$days_til_exp" -le "${REPORT_EXPIRY_WARN_DAYS:-30}" ]] && [[ "$days_til_exp" -ge 0 ]] && expiring_soon=$((expiring_soon+1))
-        local days_since; days_since=$(_ar_days_since_login "$u")
-        [[ "$days_since" -ge "${REPORT_INACTIVE_DAYS:-90}" ]] && inactive_count=$((inactive_count+1))
-        local ll; ll=$(_ar_get_last_login "$u"); [[ "$ll" == "Never" ]] && never_logged=$((never_logged+1))
-        passwd -S "$u" 2>/dev/null | awk '{print $2}' | grep -qE "^L" && locked_count=$((locked_count+1))
+        id -nG "$u" 2>/dev/null | tr ' ' '\n' | grep -qxE "wheel|sudo" \
+            && sudo_count=$(( sudo_count + 1 ))
+
+        local days_left
+        days_left=$(_ar_expiry_days_remaining "$u")
+        if [[ -n "$days_left" && "$days_left" -le ${REPORT_EXPIRY_WARN_DAYS:-30} && "$days_left" -ge 0 ]]; then
+            expiring_soon=$(( expiring_soon + 1 ))
+        fi
+
+        local days_since
+        days_since=$(_ar_days_since_login "$u")
+        [[ "$days_since" -ge ${REPORT_INACTIVE_DAYS:-90} ]] \
+            && inactive_count=$(( inactive_count + 1 ))
+
+        local ll
+        ll=$(_ar_last_login "$u")
+        [[ "$ll" == "Never" ]] && never_logged=$(( never_logged + 1 ))
+
+        local pw_st
+        pw_st=$(passwd -S "$u" 2>/dev/null | awk '{print $2}')
+        [[ "$pw_st" == "L" || "$pw_st" == "LK" ]] \
+            && locked_count=$(( locked_count + 1 ))
     done
 
+    # ── Write HTML report ──────────────────────────────────────────────────────
     {
         _ar_html_header "$(date '+%Y-%m-%d %H:%M:%S')"
 
         # Summary cards
+        local ec_class wc_class ic_class nc_class lc_class
+        ec_class="";       [[ $expiring_soon -gt 0 ]] && ec_class=" c-warn"
+        wc_class="";       [[ $sudo_count    -gt 0 ]] && wc_class=" c-warn"
+        ic_class="";       [[ $inactive_count -gt 0 ]] && ic_class=" c-warn"
+        nc_class="";       [[ $never_logged  -gt 0 ]] && nc_class=" c-warn"
+        lc_class="";       [[ $locked_count  -gt 0 ]] && lc_class=" c-err"
+
         cat <<EOF
-<div class="summary-grid">
-  <div class="summary-card"><div class="summary-num">$total_users</div><div class="summary-label">Total Users</div></div>
-  <div class="summary-card $([ $sudo_users -gt 0 ] && echo warn)"><div class="summary-num">$sudo_users</div><div class="summary-label">Sudo Users</div></div>
-  <div class="summary-card $([ $expiring_soon -gt 0 ] && echo warn)"><div class="summary-num">$expiring_soon</div><div class="summary-label">Expiring Soon</div></div>
-  <div class="summary-card $([ $inactive_count -gt 0 ] && echo warn)"><div class="summary-num">$inactive_count</div><div class="summary-label">Inactive 90d+</div></div>
-  <div class="summary-card $([ $never_logged -gt 0 ] && echo warn)"><div class="summary-num">$never_logged</div><div class="summary-label">Never Logged In</div></div>
-  <div class="summary-card $([ $locked_count -gt 0 ] && echo err)"><div class="summary-num">$locked_count</div><div class="summary-label">Locked Accounts</div></div>
+<div class="grid">
+  <div class="card"><div class="card-num">$total_users</div><div class="card-lbl">Total Users</div></div>
+  <div class="card${wc_class}"><div class="card-num">$sudo_count</div><div class="card-lbl">Sudo Users</div></div>
+  <div class="card${ec_class}"><div class="card-num">$expiring_soon</div><div class="card-lbl">Expiring ≤${REPORT_EXPIRY_WARN_DAYS:-30}d</div></div>
+  <div class="card${ic_class}"><div class="card-num">$inactive_count</div><div class="card-lbl">Inactive ${REPORT_INACTIVE_DAYS:-90}d+</div></div>
+  <div class="card${nc_class}"><div class="card-num">$never_logged</div><div class="card-lbl">Never Logged In</div></div>
+  <div class="card${lc_class}"><div class="card-num">$locked_count</div><div class="card-lbl">Locked</div></div>
 </div>
 EOF
 
-        # ── Section 1: All Active Users ───────────────────────────────────────
-        echo "<h2>1. All User Accounts</h2>"
-        echo "<table><tr><th>Username</th><th>Full Name</th><th>UID</th><th>Shell</th><th>Groups</th><th>Last Login</th><th>Status</th></tr>"
+        # §1 All Users
+        printf '<h2>1. All User Accounts</h2>\n'
+        printf '<table><tr><th>Username</th><th>Full Name</th><th>UID</th><th>Shell</th><th>Groups</th><th>Last Login</th><th>Status</th></tr>\n'
         for u in "${all_users[@]}"; do
-            local uid; uid=$(id -u "$u")
-            local gecos; gecos=$(getent passwd "$u" | cut -d: -f5 | cut -d, -f1)
-            local shell; shell=$(getent passwd "$u" | cut -d: -f7)
-            local grps; grps=$(id -nG "$u" 2>/dev/null | tr ' ' ',' | head -c 80)
-            local ll; ll=$(_ar_get_last_login "$u")
-            local pw_status; pw_status=$(passwd -S "$u" 2>/dev/null | awk '{print $2}')
-            local status_badge
-            case "$pw_status" in
-                P|PS) status_badge='<span class="badge badge-ok">Active</span>' ;;
-                L|LK) status_badge='<span class="badge badge-err">Locked</span>' ;;
-                NP)   status_badge='<span class="badge badge-warn">No Password</span>' ;;
-                *)    status_badge='<span class="badge badge-grey">Unknown</span>' ;;
+            local uid gecos shell grps ll pw_st badge
+            uid=$(id -u "$u")
+            gecos=$(getent passwd "$u" | cut -d: -f5 | cut -d, -f1)
+            shell=$(getent passwd "$u" | cut -d: -f7)
+            grps=$(id -nG "$u" 2>/dev/null | tr ' ' ',' || printf '')
+            ll=$(_ar_last_login "$u")
+            pw_st=$(passwd -S "$u" 2>/dev/null | awk '{print $2}')
+            case "$pw_st" in
+                P|PS) badge='<span class="badge ok">Active</span>' ;;
+                L|LK) badge='<span class="badge err">Locked</span>' ;;
+                NP)   badge='<span class="badge warn">No Password</span>' ;;
+                *)    badge='<span class="badge grey">Unknown</span>' ;;
             esac
-            echo "<tr><td><code>$u</code></td><td>$gecos</td><td>$uid</td><td><code>$shell</code></td><td><small>$grps</small></td><td>${ll}</td><td>$status_badge</td></tr>"
+            printf '<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td><code>%s</code></td><td><small>%s</small></td><td>%s</td><td>%s</td></tr>\n' \
+                "$u" "${gecos:-(none)}" "$uid" "$shell" "$grps" "$ll" "$badge"
         done
-        echo "</table>"
+        printf '</table>\n'
 
-        # ── Section 2: Sudo Users ─────────────────────────────────────────────
-        echo "<h2>2. Users with Sudo / Wheel Access</h2>"
-        echo "<table><tr><th>Username</th><th>Full Name</th><th>UID</th><th>Sudo Groups</th></tr>"
+        # §2 Sudo Users
+        printf '<h2>2. Privileged (sudo / wheel) Users</h2>\n'
+        printf '<table><tr><th>Username</th><th>Full Name</th><th>UID</th><th>Privileged Groups</th><th>Last Login</th></tr>\n'
+        local found_sudo=0
         for u in "${all_users[@]}"; do
-            local grps; grps=$(id -nG "$u" 2>/dev/null)
-            if echo "$grps" | grep -qwE "wheel|sudo"; then
-                local uid; uid=$(id -u "$u")
-                local gecos; gecos=$(getent passwd "$u" | cut -d: -f5 | cut -d, -f1)
-                local sudo_grps; sudo_grps=$(echo "$grps" | tr ' ' '\n' | grep -E "^(wheel|sudo)" | tr '\n' ',' | sed 's/,$//')
-                echo "<tr><td><code>$u</code></td><td>$gecos</td><td>$uid</td><td><span class=\"badge badge-warn\">$sudo_grps</span></td></tr>"
+            local grps
+            grps=$(id -nG "$u" 2>/dev/null)
+            if printf '%s' "$grps" | tr ' ' '\n' | grep -qxE "wheel|sudo"; then
+                local uid gecos ll sudo_grps
+                uid=$(id -u "$u")
+                gecos=$(getent passwd "$u" | cut -d: -f5 | cut -d, -f1)
+                ll=$(_ar_last_login "$u")
+                sudo_grps=$(printf '%s' "$grps" | tr ' ' '\n' | grep -E "^(wheel|sudo)" | tr '\n' ',' | sed 's/,$//')
+                printf '<tr><td><code>%s</code></td><td>%s</td><td>%s</td><td><span class="badge warn">%s</span></td><td>%s</td></tr>\n' \
+                    "$u" "${gecos:-(none)}" "$uid" "$sudo_grps" "$ll"
+                found_sudo=$(( found_sudo + 1 ))
             fi
         done
-        echo "</table>"
+        [[ $found_sudo -eq 0 ]] && printf '<tr><td colspan="5" class="empty">No privileged accounts found</td></tr>\n'
+        printf '</table>\n'
 
-        # ── Section 3: Accounts expiring within REPORT_EXPIRY_WARN_DAYS ──────
-        echo "<h2>3. Accounts Expiring Within ${REPORT_EXPIRY_WARN_DAYS:-30} Days</h2>"
-        echo "<table><tr><th>Username</th><th>Expiry Date</th><th>Days Remaining</th><th>Action</th></tr>"
-        local found_expiry=0
+        # §3 Accounts expiring within REPORT_EXPIRY_WARN_DAYS
+        printf '<h2>3. Accounts Expiring Within %d Days</h2>\n' "${REPORT_EXPIRY_WARN_DAYS:-30}"
+        printf '<table><tr><th>Username</th><th>Expiry Date</th><th>Days Remaining</th><th>Recommendation</th></tr>\n'
+        local found_exp=0
         for u in "${all_users[@]}"; do
-            local expiry; expiry=$(chage -l "$u" 2>/dev/null | grep "Account expires" | awk -F': ' '{print $2}')
-            [[ -z "$expiry" || "$expiry" == "never" ]] && continue
-            local days; days=$(_ar_check_expiry_days "$u")
-            [[ -z "$days" ]] && continue
-            if [[ "$days" -le "${REPORT_EXPIRY_WARN_DAYS:-30}" ]]; then
-                local badge_class="badge-warn"
-                [[ "$days" -le 7 ]] && badge_class="badge-err"
-                [[ "$days" -le 0 ]] && badge_class="badge-err"
-                echo "<tr><td><code>$u</code></td><td>$expiry</td><td><span class=\"badge $badge_class\">${days}d</span></td><td>Review required</td></tr>"
-                found_expiry=$((found_expiry+1))
+            local days_left expiry_date_str
+            days_left=$(_ar_expiry_days_remaining "$u")
+            [[ -z "$days_left" ]] && continue
+            if [[ "$days_left" -le ${REPORT_EXPIRY_WARN_DAYS:-30} ]]; then
+                expiry_date_str=$(chage -l "$u" 2>/dev/null | grep "Account expires" | awk -F': ' '{print $2}')
+                local badge_class="badge warn"
+                [[ "$days_left" -le 7 ]] && badge_class="badge err"
+                [[ "$days_left" -lt 0 ]] && badge_class="badge err"
+                printf '<tr><td><code>%s</code></td><td>%s</td><td><span class="%s">%dd</span></td><td>Review &amp; extend or offboard</td></tr>\n' \
+                    "$u" "$expiry_date_str" "$badge_class" "$days_left"
+                found_exp=$(( found_exp + 1 ))
             fi
         done
-        [[ $found_expiry -eq 0 ]] && echo "<tr><td colspan='4' style='color:#6c7086;text-align:center'>No accounts expiring soon</td></tr>"
-        echo "</table>"
+        [[ $found_exp -eq 0 ]] && printf '<tr><td colspan="4" class="empty">No accounts expiring soon</td></tr>\n'
+        printf '</table>\n'
 
-        # ── Section 4: Accounts inactive for 90+ days ─────────────────────────
-        echo "<h2>4. Accounts Inactive for ${REPORT_INACTIVE_DAYS:-90}+ Days</h2>"
-        echo "<table><tr><th>Username</th><th>Last Login</th><th>Days Inactive</th><th>Recommendation</th></tr>"
+        # §4 Inactive accounts
+        printf '<h2>4. Accounts Inactive for %d+ Days</h2>\n' "${REPORT_INACTIVE_DAYS:-90}"
+        printf '<table><tr><th>Username</th><th>Last Login</th><th>Days Inactive</th><th>Recommendation</th></tr>\n'
         local found_inactive=0
         for u in "${all_users[@]}"; do
-            local days_since; days_since=$(_ar_days_since_login "$u")
-            local ll; ll=$(_ar_get_last_login "$u")
-            if [[ "$days_since" -ge "${REPORT_INACTIVE_DAYS:-90}" ]]; then
-                echo "<tr><td><code>$u</code></td><td>$ll</td><td><span class=\"badge badge-warn\">${days_since}d</span></td><td>Consider disabling</td></tr>"
-                found_inactive=$((found_inactive+1))
+            local ds ll
+            ds=$(_ar_days_since_login "$u")
+            ll=$(_ar_last_login "$u")
+            if [[ "$ds" -ge ${REPORT_INACTIVE_DAYS:-90} ]]; then
+                printf '<tr><td><code>%s</code></td><td>%s</td><td><span class="badge warn">%dd</span></td><td>Consider disabling or deleting</td></tr>\n' \
+                    "$u" "$ll" "$ds"
+                found_inactive=$(( found_inactive + 1 ))
             fi
         done
-        [[ $found_inactive -eq 0 ]] && echo "<tr><td colspan='4' style='color:#6c7086;text-align:center'>No accounts inactive beyond threshold</td></tr>"
-        echo "</table>"
+        [[ $found_inactive -eq 0 ]] && printf '<tr><td colspan="4" class="empty">No inactive accounts beyond threshold</td></tr>\n'
+        printf '</table>\n'
 
-        # ── Section 5: Never logged in ────────────────────────────────────────
-        echo "<h2>5. Accounts That Have Never Logged In</h2>"
-        echo "<table><tr><th>Username</th><th>Created (approx)</th><th>Shell</th><th>Status</th></tr>"
+        # §5 Never logged in
+        printf '<h2>5. Accounts That Have Never Logged In</h2>\n'
+        printf '<table><tr><th>Username</th><th>Home Created (approx)</th><th>Shell</th><th>Status</th></tr>\n'
         local found_never=0
         for u in "${all_users[@]}"; do
-            local ll; ll=$(_ar_get_last_login "$u")
+            local ll
+            ll=$(_ar_last_login "$u")
             if [[ "$ll" == "Never" ]]; then
-                local shell; shell=$(getent passwd "$u" | cut -d: -f7)
-                local home; home=$(getent passwd "$u" | cut -d: -f6)
-                local created; created=$(stat -c %y "${home}" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
-                echo "<tr><td><code>$u</code></td><td>$created</td><td><code>$shell</code></td><td><span class=\"badge badge-grey\">Never Logged In</span></td></tr>"
-                found_never=$((found_never+1))
+                local home shell created_date
+                home=$(getent passwd "$u" | cut -d: -f6)
+                shell=$(getent passwd "$u" | cut -d: -f7)
+                created_date=$(stat -c %y "${home}" 2>/dev/null | cut -d' ' -f1 || printf 'unknown')
+                printf '<tr><td><code>%s</code></td><td>%s</td><td><code>%s</code></td><td><span class="badge grey">Never logged in</span></td></tr>\n' \
+                    "$u" "$created_date" "$shell"
+                found_never=$(( found_never + 1 ))
             fi
         done
-        [[ $found_never -eq 0 ]] && echo "<tr><td colspan='4' style='color:#6c7086;text-align:center'>All accounts have been used</td></tr>"
-        echo "</table>"
+        [[ $found_never -eq 0 ]] && printf '<tr><td colspan="4" class="empty">All provisioned accounts have been used</td></tr>\n'
+        printf '</table>\n'
 
-        # ── Section 6: Failed login attempts (last 7 days) ────────────────────
-        echo "<h2>6. Failed Login Attempts — Last 7 Days</h2>"
-        echo "<table><tr><th>Username / Source</th><th>Failures</th><th>Last Attempt</th></tr>"
+        # §6 Failed SSH logins (last 7 days)
+        printf '<h2>6. Failed SSH Login Attempts — Last 7 Days</h2>\n'
+        printf '<table><tr><th>Target (user @ source IP)</th><th>Failure Count</th><th>Last Attempt</th></tr>\n'
+        local fail_count=0
         if command -v journalctl &>/dev/null; then
             journalctl --since "7 days ago" _SYSTEMD_UNIT=sshd.service 2>/dev/null \
-                | grep -i "Failed password\|Invalid user" \
-                | awk '{
+            | grep -iE "Failed password|Invalid user" \
+            | awk '
+                {
+                    user=""; ip=""
                     for(i=1;i<=NF;i++){
-                        if($i=="for"){user=$(i+1)}
-                        if($i=="from"){ip=$(i+1)}
+                        if($i=="for"||$i=="user") user=$(i+1)
+                        if($i=="from") ip=$(i+1)
                     }
-                    if(user!=""){
+                    if(user!="") {
                         key=user" @ "ip
                         count[key]++
                         last[key]=$1" "$2" "$3
                     }
                 }
-                END{for(k in count) print count[k]"\t"k"\t"last[k]}' \
-                | sort -rn \
-                | head -20 \
-                | while IFS=$'\t' read -r count key last; do
-                    local badge="badge-warn"
-                    [[ $count -gt 20 ]] && badge="badge-err"
-                    echo "<tr><td><code>$key</code></td><td><span class=\"badge $badge\">$count</span></td><td>$last</td></tr>"
-                done || echo "<tr><td colspan='3' style='color:#6c7086'>No SSH failures in journal (journalctl)</td></tr>"
-        else
-            echo "<tr><td colspan='3' style='color:#6c7086'>journalctl not available on this system</td></tr>"
+                END {
+                    for(k in count)
+                        print count[k]"\t"k"\t"last[k]
+                }' \
+            | sort -rn \
+            | head -25 \
+            | while IFS=$'\t' read -r cnt key last; do
+                local bclass="badge warn"
+                [[ "$cnt" -gt 20 ]] && bclass="badge err"
+                printf '<tr><td><code>%s</code></td><td><span class="%s">%s</span></td><td>%s</td></tr>\n' \
+                    "$key" "$bclass" "$cnt" "$last"
+                fail_count=$(( fail_count + 1 ))
+            done || true
         fi
-        echo "</table>"
+        if [[ $fail_count -eq 0 ]]; then
+            printf '<tr><td colspan="3" class="empty">No failed SSH logins found (or journalctl not available)</td></tr>\n'
+        fi
+        printf '</table>\n'
 
-        # ── Section 7: Recent sudo usage log ──────────────────────────────────
-        echo "<h2>7. Recent sudo Usage (Last 50 Lines)</h2>"
-        echo "<table><tr><th>Timestamp</th><th>User</th><th>Command</th></tr>"
+        # §7 Recent sudo usage
+        printf '<h2>7. sudo Usage Log — Last 50 Entries</h2>\n'
+        printf '<table><tr><th>Timestamp</th><th>User</th><th>Command</th></tr>\n'
+        local sudo_count_log=0
         if command -v journalctl &>/dev/null; then
             journalctl --since "30 days ago" 2>/dev/null \
-                | grep -i "sudo\[" \
-                | tail -50 \
-                | while read -r line; do
-                    local ts_part; ts_part=$(echo "$line" | awk '{print $1,$2,$3}')
-                    local cmd_part; cmd_part=$(echo "$line" | sed 's/.*COMMAND=/COMMAND=/')
-                    echo "<tr><td>$ts_part</td><td>$(echo "$line" | awk '{print $5}' | sed 's/sudo\[.*//')</td><td><code>$cmd_part</code></td></tr>"
-                done || echo "<tr><td colspan='3' style='color:#6c7086'>No sudo entries found</td></tr>"
+            | grep 'sudo\[' \
+            | grep 'COMMAND=' \
+            | tail -50 \
+            | while IFS= read -r sline; do
+                local ts_part user_part cmd_part
+                ts_part=$(printf '%s' "$sline" | awk '{print $1,$2,$3}')
+                user_part=$(printf '%s' "$sline" | grep -oP 'USER=\K\S+' 2>/dev/null || printf 'root')
+                cmd_part="${sline##*COMMAND=}"
+                printf '<tr><td>%s</td><td><code>%s</code></td><td><code>%s</code></td></tr>\n' \
+                    "$ts_part" "$user_part" "${cmd_part:0:200}"
+                sudo_count_log=$(( sudo_count_log + 1 ))
+            done || true
         elif [[ -f /var/log/secure ]]; then
-            grep "sudo" /var/log/secure 2>/dev/null \
-                | grep "COMMAND" \
-                | tail -50 \
-                | while read -r line; do
-                    local ts_part; ts_part=$(echo "$line" | awk '{print $1,$2,$3}')
-                    local cmd_part; cmd_part=$(echo "$line" | sed 's/.*COMMAND=//')
-                    local user_part; user_part=$(echo "$line" | grep -oP 'USER=\K\S+')
-                    echo "<tr><td>$ts_part</td><td>$user_part</td><td><code>$cmd_part</code></td></tr>"
-                done
-        else
-            echo "<tr><td colspan='3' style='color:#6c7086'>No sudo log source available</td></tr>"
+            grep 'sudo' /var/log/secure 2>/dev/null \
+            | grep 'COMMAND=' \
+            | tail -50 \
+            | while IFS= read -r sline; do
+                local ts_part user_part cmd_part
+                ts_part=$(printf '%s' "$sline" | awk '{print $1,$2,$3}')
+                user_part=$(printf '%s' "$sline" | grep -oP 'USER=\K\S+' 2>/dev/null || printf 'root')
+                cmd_part="${sline##*COMMAND=}"
+                printf '<tr><td>%s</td><td><code>%s</code></td><td><code>%s</code></td></tr>\n' \
+                    "$ts_part" "$user_part" "${cmd_part:0:200}"
+            done || true
         fi
-        echo "</table>"
+        printf '<tr><td colspan="3" class="empty">End of sudo log</td></tr>\n'
+        printf '</table>\n'
 
         _ar_html_footer
 
     } > "$output_file"
 
     chmod 640 "$output_file"
-    _ar_log "OK" "Report written: $output_file"
+    _ar_log "OK" "Report written → $output_file ($(wc -c < "$output_file") bytes)"
 
-    # Email report
-    if [[ "${SEND_REPORT_EMAIL:-false}" == "true" ]] && [[ -n "${ADMIN_EMAIL:-}" ]]; then
-        if command -v mail &>/dev/null; then
-            mail -s "[UserMgmt Audit] Access Report — $(date +%Y-%m-%d)" \
-                 -a "Content-Type: text/html" \
-                 "${ADMIN_EMAIL}" < "$output_file" 2>/dev/null || true
-            _ar_log "INFO" "Report emailed to $ADMIN_EMAIL"
-        fi
+    # Email report if configured
+    if [[ "${SEND_REPORT_EMAIL:-false}" == "true" ]] \
+    && [[ -n "${ADMIN_EMAIL:-}" ]] \
+    && command -v mail &>/dev/null; then
+        mail -s "[UserMgmt Audit] Access Report — $(date +%Y-%m-%d)" \
+             -a "Content-Type: text/html" \
+             "${ADMIN_EMAIL}" < "$output_file" 2>/dev/null || true
+        _ar_log "INFO" "Report emailed to $ADMIN_EMAIL"
     fi
 
-    echo ""
-    echo "  ✔ Audit report generated: $output_file"
-    echo ""
+    printf '\n  ✔ Audit report: %s\n\n' "$output_file"
 }
 
 # ── Standalone execution ──────────────────────────────────────────────────────
@@ -346,15 +412,29 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --dry-run)  DRY_RUN=true ;;
-            --output)   shift; OUTPUT_FILE="${1:?output path required}" ;;
+            --dry-run) DRY_RUN=true ;;
+            --output)
+                shift
+                OUTPUT_FILE="${1:?output path required after --output}"
+                ;;
             --help|-h)
-                echo "Usage: $0 [--dry-run] [--output /path/report.html]"
+                printf 'Usage: %s [--dry-run] [--output /path/report.html]\n\n' "$0"
+                printf 'Generates a 7-section HTML audit report:\n'
+                printf '  §1 All users (status, last login, groups)\n'
+                printf '  §2 Sudo / wheel members\n'
+                printf '  §3 Accounts expiring within %d days\n' "${REPORT_EXPIRY_WARN_DAYS:-30}"
+                printf '  §4 Accounts inactive for %d+ days\n' "${REPORT_INACTIVE_DAYS:-90}"
+                printf '  §5 Never-logged-in accounts\n'
+                printf '  §6 SSH failure attempts (7 days)\n'
+                printf '  §7 sudo usage log (last 50 entries)\n\n'
+                printf 'Default output: %s/audit_<timestamp>.html\n' "${REPORT_OUTPUT_DIR:-/var/reports/usermgmt}"
                 exit 0 ;;
-            *) echo "[ERROR] Unknown argument: $1" >&2; exit 1 ;;
+            *)
+                printf '[ERROR] Unknown argument: %s\n' "$1" >&2; exit 1 ;;
         esac
         shift
     done
 
+    export DRY_RUN
     run_audit_report "$OUTPUT_FILE"
 fi

@@ -1,44 +1,51 @@
 #!/usr/bin/env bash
-# tests/test_user_mgmt.sh — Basic smoke tests for all modules
-# Usage: sudo bash tests/test_user_mgmt.sh
-# Runs all operations in --dry-run mode to validate logic without changes.
+# tests/test_user_mgmt.sh — Smoke tests for all Linux User Access Mgmt modules
+# Usage: bash tests/test_user_mgmt.sh
+# Runs operations in --dry-run mode to validate logic without making changes.
+# shellcheck shell=bash
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# SC2155 fix: separate declare and assign
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+readonly SCRIPT_DIR
+
 readonly TEST_CSV="/tmp/usermgmt_test_$$.csv"
 
 PASS=0
 FAIL=0
 
+# ── Test helpers ──────────────────────────────────────────────────────────────
 _test() {
     local desc="$1"; shift
     if "$@" &>/dev/null; then
-        echo "  ✔ PASS: $desc"
-        PASS=$((PASS+1))
+        printf '  ✔ PASS: %s\n' "$desc"
+        PASS=$(( PASS + 1 ))
     else
-        echo "  ✘ FAIL: $desc"
-        FAIL=$((FAIL+1))
+        printf '  ✘ FAIL: %s\n' "$desc"
+        FAIL=$(( FAIL + 1 ))
     fi
 }
 
 _test_fail() {
     local desc="$1"; shift
     if ! "$@" &>/dev/null; then
-        echo "  ✔ PASS (expected failure): $desc"
-        PASS=$((PASS+1))
+        printf '  ✔ PASS (expected failure): %s\n' "$desc"
+        PASS=$(( PASS + 1 ))
     else
-        echo "  ✘ FAIL (should have failed): $desc"
-        FAIL=$((FAIL+1))
+        printf '  ✘ FAIL (should have failed): %s\n' "$desc"
+        FAIL=$(( FAIL + 1 ))
     fi
 }
 
-echo ""
-echo "  ━━━ User Management Smoke Tests ━━━"
-echo "  Mode: DRY-RUN (no system changes)"
-echo "  Target: RHEL 9 / Rocky Linux"
-echo ""
+# ── Header ────────────────────────────────────────────────────────────────────
+printf '\n'
+printf '  ━━━ Linux User & Access Mgmt — Smoke Tests ━━━\n'
+printf '  Mode   : DRY-RUN (no system changes)\n'
+printf '  Target : RHEL 9 / Rocky Linux / CentOS Stream 9\n'
+printf '  Date   : %s\n' "$(date '+%Y-%m-%d %H:%M:%S')"
+printf '\n'
 
-# Setup test CSV
+# ── Setup: test CSV ───────────────────────────────────────────────────────────
 cat > "$TEST_CSV" <<'TESTCSV'
 username,full_name,email,department,groups,shell,expiry_date,ssh_key_file
 testuser1,Test User One,test1@test.com,IT,developers,/bin/bash,2026-12-31,
@@ -47,91 +54,104 @@ TESTCSV
 
 export DRY_RUN=true
 
-# ── Test: create_users.sh ─────────────────────────────────────────────────────
-echo "  [create_users.sh]"
-_test "Dry-run create from valid CSV" \
+# ── create_users.sh ───────────────────────────────────────────────────────────
+printf '  [create_users.sh]\n'
+_test      "Dry-run create from valid CSV" \
     bash "${SCRIPT_DIR}/modules/create_users.sh" --dry-run "$TEST_CSV"
 
 _test_fail "Rejects missing CSV file" \
-    bash "${SCRIPT_DIR}/modules/create_users.sh" --dry-run "/nonexistent.csv"
+    bash "${SCRIPT_DIR}/modules/create_users.sh" --dry-run "/nonexistent_file_$$.csv"
 
-_test "Shows help" \
+_test      "Shows help" \
     bash "${SCRIPT_DIR}/modules/create_users.sh" --help
 
-# ── Test: disable_users.sh ────────────────────────────────────────────────────
-echo ""
-echo "  [disable_users.sh]"
+# ── disable_users.sh ──────────────────────────────────────────────────────────
+printf '\n  [disable_users.sh]\n'
 _test "Shows help" \
     bash "${SCRIPT_DIR}/modules/disable_users.sh" --help
 
-# ── Test: delete_users.sh ─────────────────────────────────────────────────────
-echo ""
-echo "  [delete_users.sh]"
+# ── delete_users.sh ───────────────────────────────────────────────────────────
+printf '\n  [delete_users.sh]\n'
 _test "Shows help" \
     bash "${SCRIPT_DIR}/modules/delete_users.sh" --help
 
-# ── Test: ssh_key_manager.sh ──────────────────────────────────────────────────
-echo ""
-echo "  [ssh_key_manager.sh]"
+# ── ssh_key_manager.sh ────────────────────────────────────────────────────────
+printf '\n  [ssh_key_manager.sh]\n'
 _test "Shows help" \
     bash "${SCRIPT_DIR}/modules/ssh_key_manager.sh" --help
 
-# ── Test: expire_accounts.sh ──────────────────────────────────────────────────
-echo ""
-echo "  [expire_accounts.sh]"
+# ── expire_accounts.sh ────────────────────────────────────────────────────────
+printf '\n  [expire_accounts.sh]\n'
 _test "Shows help" \
     bash "${SCRIPT_DIR}/modules/expire_accounts.sh" --help
 
-# ── Test: password_policy.sh ──────────────────────────────────────────────────
-echo ""
-echo "  [password_policy.sh]"
+# ── password_policy.sh ────────────────────────────────────────────────────────
+printf '\n  [password_policy.sh]\n'
 _test "Shows help" \
     bash "${SCRIPT_DIR}/modules/password_policy.sh" --help
 
-# ── Test: set_permissions.sh ──────────────────────────────────────────────────
-echo ""
-echo "  [set_permissions.sh]"
+# ── set_permissions.sh ────────────────────────────────────────────────────────
+printf '\n  [set_permissions.sh]\n'
 _test "Shows help" \
     bash "${SCRIPT_DIR}/modules/set_permissions.sh" --help
 
-# ── Test: audit_report.sh ─────────────────────────────────────────────────────
-echo ""
-echo "  [audit_report.sh]"
+# ── audit_report.sh ───────────────────────────────────────────────────────────
+printf '\n  [audit_report.sh]\n'
 _test "Shows help" \
     bash "${SCRIPT_DIR}/modules/audit_report.sh" --help
 
-# ── Test: config.conf ─────────────────────────────────────────────────────────
-echo ""
-echo "  [config.conf]"
+# ── config.conf ───────────────────────────────────────────────────────────────
+printf '\n  [config.conf]\n'
 _test "config.conf exists and is readable" \
     test -r "${SCRIPT_DIR}/config.conf"
 
-_test "config.conf contains required keys" \
+_test "config.conf contains LOG_FILE key" \
     grep -q "^LOG_FILE=" "${SCRIPT_DIR}/config.conf"
 
-# ── Test: CSV template ────────────────────────────────────────────────────────
-echo ""
-echo "  [templates/users_template.csv]"
+_test "config.conf contains PASS_MAX_DAYS key" \
+    grep -q "^PASS_MAX_DAYS=" "${SCRIPT_DIR}/config.conf"
+
+_test "config.conf contains ADMIN_EMAIL key" \
+    grep -q "^ADMIN_EMAIL=" "${SCRIPT_DIR}/config.conf"
+
+# ── templates/users_template.csv ─────────────────────────────────────────────
+printf '\n  [templates/users_template.csv]\n'
 _test "CSV template exists" \
     test -f "${SCRIPT_DIR}/templates/users_template.csv"
 
 _test "CSV template has correct header" \
-    head -1 "${SCRIPT_DIR}/templates/users_template.csv" | \
-    grep -q "username,full_name,email,department,groups,shell,expiry_date,ssh_key_file"
+    grep -q "^username,full_name,email,department,groups,shell,expiry_date,ssh_key_file" \
+    "${SCRIPT_DIR}/templates/users_template.csv"
+
+_test "CSV template has at least 1 data row" \
+    test "$(wc -l < "${SCRIPT_DIR}/templates/users_template.csv")" -ge 2
+
+# ── user_manager.sh ───────────────────────────────────────────────────────────
+printf '\n  [user_manager.sh]\n'
+_test "Shows version" \
+    bash "${SCRIPT_DIR}/user_manager.sh" --version
+
+_test "Shows help" \
+    bash "${SCRIPT_DIR}/user_manager.sh" --help
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
 rm -f "$TEST_CSV"
 
 # ── Summary ───────────────────────────────────────────────────────────────────
-echo ""
-echo "  ════════════════════════════════"
-echo "  Test Results"
-echo "  ════════════════════════════════"
-echo "  PASS : $PASS"
-echo "  FAIL : $FAIL"
-echo "  ════════════════════════════════"
-echo ""
+printf '\n'
+printf '  ════════════════════════════════════\n'
+printf '  Test Results — %s\n' "$(date '+%Y-%m-%d')"
+printf '  ════════════════════════════════════\n'
+printf '  PASS : %d\n' "$PASS"
+printf '  FAIL : %d\n' "$FAIL"
+printf '  TOTAL: %d\n' "$(( PASS + FAIL ))"
+printf '  ════════════════════════════════════\n'
+printf '\n'
 
-[[ $FAIL -eq 0 ]] && echo "  ✔ All tests passed!" || echo "  ✘ $FAIL test(s) failed."
-echo ""
-exit $FAIL
+if [[ $FAIL -eq 0 ]]; then
+    printf '  ✔ All %d tests passed!\n\n' "$PASS"
+else
+    printf '  ✘ %d test(s) failed. Review output above.\n\n' "$FAIL"
+fi
+
+exit "$FAIL"

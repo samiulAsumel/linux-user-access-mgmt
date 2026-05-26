@@ -4,9 +4,12 @@
 # installs systemd timer or cron job for weekly audit report.
 # Usage: sudo bash install.sh [--uninstall] [--dry-run]
 # shellcheck shell=bash
+# shellcheck source=config.conf
 set -euo pipefail
 
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# SC2155 fix: separate declare and assign
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly SCRIPT_DIR
 readonly VERSION="1.0.0"
 readonly INSTALL_BIN="/usr/local/sbin"
 readonly INSTALL_LIB="/opt/usermgmt"
@@ -25,10 +28,10 @@ else
     C_RESET=''; C_BOLD=''; C_CYAN=''; C_GREEN=''; C_YELLOW=''; C_RED=''; C_DIM=''
 fi
 
-_info()  { echo "${C_CYAN}  →${C_RESET} $*"; }
-_ok()    { echo "${C_GREEN}  ✔${C_RESET} $*"; }
-_warn()  { echo "${C_YELLOW}  ⚠${C_RESET} $*"; }
-_err()   { echo "${C_RED}  ✘${C_RESET} $*" >&2; }
+_info()  { printf '%s\n' "${C_CYAN}  →${C_RESET} $*"; }
+_ok()    { printf '%s\n' "${C_GREEN}  ✔${C_RESET} $*"; }
+_warn()  { printf '%s\n' "${C_YELLOW}  ⚠${C_RESET} $*"; }
+_err()   { printf '%s\n' "${C_RED}  ✘${C_RESET} $*" >&2; }
 _die()   { _err "$*"; exit 1; }
 
 DRY_RUN=false
@@ -39,14 +42,14 @@ for arg in "$@"; do
         --dry-run)   DRY_RUN=true ;;
         --uninstall) UNINSTALL=true ;;
         --help|-h)
-            echo "Usage: sudo bash install.sh [--uninstall] [--dry-run]"
+            printf '%s\n' "Usage: sudo bash install.sh [--uninstall] [--dry-run]"
             exit 0 ;;
     esac
 done
 
 _dry() {
     if [[ "$DRY_RUN" == "true" ]]; then
-        echo "${C_DIM}  [dry] $*${C_RESET}"
+        printf '%s\n' "${C_DIM}  [dry] $*${C_RESET}"
         return 0
     fi
     "$@"
@@ -57,19 +60,19 @@ _dry() {
 # ─────────────────────────────────────────────────────────────────────────────
 [[ $EUID -eq 0 ]] || _die "Must run as root: sudo bash install.sh"
 
-echo ""
-echo "${C_BOLD}${C_CYAN}"
+printf '\n'
+printf '%s%s' "${C_BOLD}" "${C_CYAN}"
 cat <<'BANNER'
   ╔═══════════════════════════════════════════════════════╗
   ║   Linux User & Access Management Automation           ║
   ║   Installer  v1.0.0  — RHEL 9 / Rocky Linux          ║
   ╚═══════════════════════════════════════════════════════╝
 BANNER
-echo "${C_RESET}"
+printf '%s\n' "${C_RESET}"
 
-[[ "$DRY_RUN" == "true" ]] && _warn "DRY-RUN MODE — no changes will be made"
+[[ "$DRY_RUN"   == "true" ]] && _warn "DRY-RUN MODE — no changes will be made"
 [[ "$UNINSTALL" == "true" ]] && _warn "UNINSTALL MODE"
-echo ""
+printf '\n'
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  UNINSTALL PATH
@@ -77,7 +80,7 @@ echo ""
 if [[ "$UNINSTALL" == "true" ]]; then
     _info "Uninstalling usermgmt…"
 
-    _dry systemctl stop usermgmt-audit.timer 2>/dev/null || true
+    _dry systemctl stop    usermgmt-audit.timer 2>/dev/null || true
     _dry systemctl disable usermgmt-audit.timer 2>/dev/null || true
     _dry rm -f "$SYSTEMD_TIMER" "$SYSTEMD_SERVICE"
     _dry systemctl daemon-reload 2>/dev/null || true
@@ -88,7 +91,7 @@ if [[ "$UNINSTALL" == "true" ]]; then
     _dry rm -rf "$INSTALL_LIB"
 
     _ok "Uninstalled. Log file retained: $LOG_FILE"
-    echo ""
+    printf '\n'
     exit 0
 fi
 
@@ -99,6 +102,7 @@ fi
 # 1. Validate config.conf exists
 _info "Checking configuration…"
 [[ -f "${SCRIPT_DIR}/config.conf" ]] || _die "config.conf not found in $SCRIPT_DIR — edit it first"
+# shellcheck disable=SC1091
 source "${SCRIPT_DIR}/config.conf"
 _ok "config.conf loaded"
 
@@ -131,8 +135,8 @@ _ok "Directories created"
 
 # 4. Copy files
 _info "Installing files…"
-_dry cp -r "${SCRIPT_DIR}/modules"   "$INSTALL_LIB/"
-_dry cp -r "${SCRIPT_DIR}/templates" "$INSTALL_LIB/"
+_dry cp -r "${SCRIPT_DIR}/modules"         "$INSTALL_LIB/"
+_dry cp -r "${SCRIPT_DIR}/templates"       "$INSTALL_LIB/"
 _dry cp    "${SCRIPT_DIR}/config.conf"     "$INSTALL_LIB/"
 _dry cp    "${SCRIPT_DIR}/user_manager.sh" "$INSTALL_LIB/"
 _dry chmod 750 "${INSTALL_LIB}/modules/"*.sh
@@ -216,22 +220,22 @@ EOF
 fi
 
 # 9. Summary
-echo ""
-echo "${C_GREEN}${C_BOLD}"
-echo "  ╔══════════════════════════════════════════════════╗"
-echo "  ║   Installation Complete!                         ║"
-echo "  ╠══════════════════════════════════════════════════╣"
-printf "  ║  %-22s: %-21s ║\n" "Installed to" "$INSTALL_LIB"
-printf "  ║  %-22s: %-21s ║\n" "Executable" "${INSTALL_BIN}/user_manager"
-printf "  ║  %-22s: %-21s ║\n" "Config" "${INSTALL_LIB}/config.conf"
-printf "  ║  %-22s: %-21s ║\n" "Log file" "$LOG_FILE"
-printf "  ║  %-22s: %-21s ║\n" "Audit schedule" "${REPORT_CRON:-0 7 * * 1}"
-echo "  ╚══════════════════════════════════════════════════╝"
-echo "${C_RESET}"
-echo ""
-echo "  ${C_BOLD}Next steps:${C_RESET}"
-echo "  1. Edit config: ${C_CYAN}nano ${INSTALL_LIB}/config.conf${C_RESET}"
-echo "  2. Add SSH keys to: ${C_CYAN}${SSH_KEYS_DIR:-/etc/usermgmt/ssh-keys}/username.pub${C_RESET}"
-echo "  3. Edit CSV template: ${C_CYAN}${INSTALL_LIB}/templates/users_template.csv${C_RESET}"
-echo "  4. Launch: ${C_CYAN}sudo user_manager${C_RESET}"
-echo ""
+printf '\n'
+printf '%s%s' "${C_GREEN}" "${C_BOLD}"
+printf '  ╔══════════════════════════════════════════════════╗\n'
+printf '  ║   Installation Complete!                         ║\n'
+printf '  ╠══════════════════════════════════════════════════╣\n'
+printf "  ║  %-22s: %-21s ║\n" "Installed to"    "$INSTALL_LIB"
+printf "  ║  %-22s: %-21s ║\n" "Executable"      "${INSTALL_BIN}/user_manager"
+printf "  ║  %-22s: %-21s ║\n" "Config"          "${INSTALL_LIB}/config.conf"
+printf "  ║  %-22s: %-21s ║\n" "Log file"        "$LOG_FILE"
+printf "  ║  %-22s: %-21s ║\n" "Audit schedule"  "${REPORT_CRON:-0 7 * * 1}"
+printf '  ╚══════════════════════════════════════════════════╝\n'
+printf '%s\n' "${C_RESET}"
+printf '\n'
+printf '  %sNext steps:%s\n'                                                "${C_BOLD}" "${C_RESET}"
+printf '  1. Edit config:    %snano %s/config.conf%s\n'                    "${C_CYAN}"  "$INSTALL_LIB"      "${C_RESET}"
+printf '  2. Add SSH keys to: %s%s/username.pub%s\n'                       "${C_CYAN}"  "${SSH_KEYS_DIR:-/etc/usermgmt/ssh-keys}" "${C_RESET}"
+printf '  3. Edit CSV template: %s%s/templates/users_template.csv%s\n'     "${C_CYAN}"  "$INSTALL_LIB"      "${C_RESET}"
+printf '  4. Launch: %ssudo user_manager%s\n'                              "${C_CYAN}"  "${C_RESET}"
+printf '\n'

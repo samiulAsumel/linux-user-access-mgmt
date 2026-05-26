@@ -35,9 +35,10 @@
   <nav class="header-nav" id="header-nav" aria-label="Main navigation">
     <a class="nav-link" href="#install">Install</a>
     <a class="nav-link" href="#architecture">Architecture</a>
+    <a class="nav-link" href="#modules">Modules</a>
     <a class="nav-link" href="#scripts">Scripts</a>
     <a class="nav-link" href="#playground">Playground</a>
-    <a class="nav-link" href="#audit">Audit</a>
+    <a class="nav-link" href="#security">Security</a>
   </nav>
 
   <div class="header-right">
@@ -60,10 +61,14 @@
 <div class="mobile-nav-overlay" id="mobile-nav-overlay" aria-hidden="true">
   <a class="mnav-link" href="#install">Install</a>
   <a class="mnav-link" href="#architecture">Architecture</a>
+  <a class="mnav-link" href="#modules">Modules</a>
   <a class="mnav-link" href="#scripts">Scripts</a>
   <a class="mnav-link" href="#playground">Playground</a>
-  <a class="mnav-link" href="#audit">Audit</a>
+  <a class="mnav-link" href="#security">Security</a>
 </div>
+
+<div id="toast-container" aria-live="assertive" aria-atomic="true"></div>
+<button id="back-to-top" aria-label="Back to top" title="Back to top">↑</button>
 
 <main id="main-content">
 
@@ -152,12 +157,12 @@
 <!-- ══════════════════════════ STATS BAR ═══════════════════════════════════ -->
 <div id="stats-bar" role="region" aria-label="Project statistics">
   <div class="stats-bar-inner">
-    <div class="stat-item"><div class="stat-num">8</div><div class="stat-label">Bash Modules</div></div>
+    <div class="stat-item"><div class="stat-num" data-count="8">8</div><div class="stat-label">Bash Modules</div></div>
     <div class="stat-item"><div class="stat-num">CSV</div><div class="stat-label">Manifest-Driven</div></div>
-    <div class="stat-item"><div class="stat-num">100%</div><div class="stat-label">Audit Logged</div></div>
+    <div class="stat-item"><div class="stat-num" data-count="100">100%</div><div class="stat-label">Audit Logged</div></div>
     <div class="stat-item"><div class="stat-num">RHEL 9</div><div class="stat-label">Production Target</div></div>
-    <div class="stat-item"><div class="stat-num">ACL</div><div class="stat-label">POSIX Permissions</div></div>
-    <div class="stat-item"><div class="stat-num">HTML</div><div class="stat-label">Audit Reports</div></div>
+    <div class="stat-item"><div class="stat-num" data-count="11">11</div><div class="stat-label">ShellCheck Clean</div></div>
+    <div class="stat-item"><div class="stat-num" data-count="7">7</div><div class="stat-label">Audit Sections</div></div>
   </div>
 </div>
 
@@ -306,6 +311,411 @@
   </div>
 </section>
 
+<!-- ══════════════════════════ CSV FORMAT ══════════════════════════════════ -->
+<section class="section" id="csv-format" aria-labelledby="csv-heading">
+  <div class="section-inner">
+    <p class="section-label">CSV Reference</p>
+    <h2 class="section-heading" id="csv-heading">Manifest-driven provisioning</h2>
+    <p class="section-sub">Define every user in a CSV file. One row = one account. Eight columns cover the full account lifecycle.</p>
+
+    <div class="csv-table-wrap">
+      <table class="csv-table" aria-label="CSV column reference">
+        <thead>
+          <tr>
+            <th>Column</th>
+            <th>Required</th>
+            <th>Type</th>
+            <th>Example</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>username</code></td>
+            <td><span class="csv-req">Required</span></td>
+            <td>String</td>
+            <td><code>jsmith</code></td>
+            <td>Lowercase, 1–32 chars, matches <code>[a-z_][a-z0-9_-]*</code></td>
+          </tr>
+          <tr>
+            <td><code>full_name</code></td>
+            <td><span class="csv-opt">Optional</span></td>
+            <td>String</td>
+            <td><code>John Smith</code></td>
+            <td>Stored in GECOS field; used in audit reports</td>
+          </tr>
+          <tr>
+            <td><code>email</code></td>
+            <td><span class="csv-opt">Optional</span></td>
+            <td>Email</td>
+            <td><code>jsmith@corp.com</code></td>
+            <td>Used for credential delivery and audit reports</td>
+          </tr>
+          <tr>
+            <td><code>department</code></td>
+            <td><span class="csv-opt">Optional</span></td>
+            <td>String</td>
+            <td><code>Engineering</code></td>
+            <td>Informational; appears in audit HTML report</td>
+          </tr>
+          <tr>
+            <td><code>groups</code></td>
+            <td><span class="csv-opt">Optional</span></td>
+            <td>List</td>
+            <td><code>developers:docker</code></td>
+            <td>Colon-separated supplementary groups; created if missing</td>
+          </tr>
+          <tr>
+            <td><code>shell</code></td>
+            <td><span class="csv-opt">Optional</span></td>
+            <td>Path</td>
+            <td><code>/bin/bash</code></td>
+            <td>Must exist in <code>/etc/shells</code>; defaults to <code>DEFAULT_SHELL</code> in config</td>
+          </tr>
+          <tr>
+            <td><code>expiry_date</code></td>
+            <td><span class="csv-opt">Optional</span></td>
+            <td>Date</td>
+            <td><code>2026-12-31</code></td>
+            <td>YYYY-MM-DD format; sets <code>chage -E</code>; leave blank for no expiry</td>
+          </tr>
+          <tr>
+            <td><code>ssh_key_file</code></td>
+            <td><span class="csv-opt">Optional</span></td>
+            <td>Filename</td>
+            <td><code>jsmith.pub</code></td>
+            <td>Public key filename — resolved from <code>SSH_KEYS_DIR</code> or project <code>ssh-keys/</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="csv-example-block">
+      <div class="csv-example-header">
+        <span>templates/users_template.csv</span>
+        <button class="copy-btn" data-copy="csv-example-code" aria-label="Copy CSV example">COPY</button>
+      </div>
+      <pre class="csv-example-body"><code id="csv-example-code">username,full_name,email,department,groups,shell,expiry_date,ssh_key_file
+jsmith,John Smith,jsmith@corp.com,Engineering,developers:docker,/bin/bash,2026-12-31,jsmith.pub
+mrahman,Mehedi Rahman,mrahman@corp.com,Finance,finance,/bin/bash,2026-06-30,mrahman.pub
+acontractor,Alex Contractor,alex@vendor.io,Vendor,,/bin/bash,2026-03-01,
+lwilson,Laura Wilson,lwilson@corp.com,HR,hr:managers,/bin/bash,,lwilson.pub
+dkumar,Dev Kumar,dkumar@corp.com,DevOps,developers:docker:sudo,/bin/bash,,dkumar.pub
+scarroll,Sarah Carroll,scarroll@corp.com,IT,sudo:developers,/bin/bash,2027-01-01,scarroll.pub</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ MODULE REFERENCE ════════════════════════════ -->
+<section class="section" id="modules" aria-labelledby="modules-heading">
+  <div class="section-inner">
+    <p class="section-label">Module Reference</p>
+    <h2 class="section-heading" id="modules-heading">8 production modules — every lifecycle event</h2>
+    <p class="section-sub">Each module runs standalone or is sourced by the interactive menu. All support <code>--dry-run</code> and write to the central audit log.</p>
+
+    <div class="modules-grid">
+
+      <div class="module-card pre-reveal">
+        <div class="module-card-header">
+          <div class="module-card-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 18v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><circle cx="10" cy="8" r="3"/></svg>
+          </div>
+          <div>
+            <div class="module-card-title">create_users.sh</div>
+            <div class="module-card-file">modules/create_users.sh</div>
+          </div>
+        </div>
+        <p class="module-card-desc">Bulk account creation from CSV. Creates groups, runs <code>useradd</code>, sets a secure random password, applies aging policy, sets expiry, and deploys SSH key — all in one pass.</p>
+        <div class="module-card-tags">
+          <span class="module-tag tag-root">root</span>
+          <span class="module-tag tag-dryrun">dry-run</span>
+          <span class="module-tag tag-log">logging</span>
+          <span class="module-tag tag-csv">CSV-driven</span>
+          <span class="module-tag tag-ssh">SSH keys</span>
+        </div>
+      </div>
+
+      <div class="module-card pre-reveal">
+        <div class="module-card-header">
+          <div class="module-card-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="9" width="14" height="9" rx="1.5"/><path d="M7 9V6.5a3 3 0 016 0V9"/></svg>
+          </div>
+          <div>
+            <div class="module-card-title">disable_users.sh</div>
+            <div class="module-card-file">modules/disable_users.sh</div>
+          </div>
+        </div>
+        <p class="module-card-desc">Locks accounts via <code>usermod -L</code>, sets expiry to epoch 1, kills active sessions with <code>pkill -SIGTERM/-SIGKILL</code>, and stamps a GECOS audit trail. Supports bulk CSV input.</p>
+        <div class="module-card-tags">
+          <span class="module-tag tag-root">root</span>
+          <span class="module-tag tag-dryrun">dry-run</span>
+          <span class="module-tag tag-log">logging</span>
+          <span class="module-tag tag-email">email alert</span>
+        </div>
+      </div>
+
+      <div class="module-card pre-reveal">
+        <div class="module-card-header">
+          <div class="module-card-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h7"/><path d="M15 13l2 2 3-3" stroke-linecap="round"/></svg>
+          </div>
+          <div>
+            <div class="module-card-title">delete_users.sh</div>
+            <div class="module-card-file">modules/delete_users.sh</div>
+          </div>
+        </div>
+        <p class="module-card-desc">Permanent account removal with safety guards: refuses system UIDs, refuses to delete the current sudo user, backs home directory to <code>/var/backup/usermgmt/homes/</code> before deletion.</p>
+        <div class="module-card-tags">
+          <span class="module-tag tag-root">root</span>
+          <span class="module-tag tag-dryrun">dry-run</span>
+          <span class="module-tag tag-log">logging</span>
+        </div>
+      </div>
+
+      <div class="module-card pre-reveal">
+        <div class="module-card-header">
+          <div class="module-card-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h7"/><path d="M15 12l2 2 4-4" stroke-linecap="round"/></svg>
+          </div>
+          <div>
+            <div class="module-card-title">audit_report.sh</div>
+            <div class="module-card-file">modules/audit_report.sh</div>
+          </div>
+        </div>
+        <p class="module-card-desc">Generates a dark-themed HTML report with 7 sections: all users, sudo users, expiring accounts, inactive accounts, never-logged-in, failed SSH logins, and sudo command history.</p>
+        <div class="module-card-tags">
+          <span class="module-tag tag-log">logging</span>
+          <span class="module-tag tag-html">HTML output</span>
+          <span class="module-tag tag-email">email delivery</span>
+        </div>
+      </div>
+
+      <div class="module-card pre-reveal">
+        <div class="module-card-header">
+          <div class="module-card-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M3 8h14M3 12h14M8 4l-4 12M12 4l4 12"/></svg>
+          </div>
+          <div>
+            <div class="module-card-title">ssh_key_manager.sh</div>
+            <div class="module-card-file">modules/ssh_key_manager.sh</div>
+          </div>
+        </div>
+        <p class="module-card-desc">Full SSH key lifecycle: deploy (validate → deduplicate → append), list with fingerprints, revoke all, rotate (revoke + deploy new). System-wide audit across all regular users.</p>
+        <div class="module-card-tags">
+          <span class="module-tag tag-root">root</span>
+          <span class="module-tag tag-dryrun">dry-run</span>
+          <span class="module-tag tag-log">logging</span>
+          <span class="module-tag tag-ssh">SSH keys</span>
+        </div>
+      </div>
+
+      <div class="module-card pre-reveal">
+        <div class="module-card-header">
+          <div class="module-card-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z"/><path d="M10 6v4l3 3" stroke-linecap="round"/></svg>
+          </div>
+          <div>
+            <div class="module-card-title">expire_accounts.sh</div>
+            <div class="module-card-file">modules/expire_accounts.sh</div>
+          </div>
+        </div>
+        <p class="module-card-desc">Scans all regular users for expired or soon-to-expire accounts. Auto-disables expired accounts via <code>usermod -L</code> and kills sessions. Supports manual set-expiry and extend actions.</p>
+        <div class="module-card-tags">
+          <span class="module-tag tag-root">root</span>
+          <span class="module-tag tag-dryrun">dry-run</span>
+          <span class="module-tag tag-log">logging</span>
+          <span class="module-tag tag-email">email alert</span>
+        </div>
+      </div>
+
+      <div class="module-card pre-reveal">
+        <div class="module-card-header">
+          <div class="module-card-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M10 2L3 5v6c0 4.5 3 8 7 9 4-1 7-4.5 7-9V5L10 2z"/><circle cx="10" cy="8.5" r="2" stroke-width="1.3"/></svg>
+          </div>
+          <div>
+            <div class="module-card-title">password_policy.sh</div>
+            <div class="module-card-file">modules/password_policy.sh</div>
+          </div>
+        </div>
+        <p class="module-card-desc">Writes <code>/etc/security/pwquality.conf</code> (minlen, dcredit, ucredit, dictcheck) and applies <code>chage</code> aging (min/max/warn/inactive days) to all or specific users.</p>
+        <div class="module-card-tags">
+          <span class="module-tag tag-root">root</span>
+          <span class="module-tag tag-dryrun">dry-run</span>
+          <span class="module-tag tag-log">logging</span>
+          <span class="module-tag tag-pam">PAM</span>
+        </div>
+      </div>
+
+      <div class="module-card pre-reveal">
+        <div class="module-card-header">
+          <div class="module-card-icon">
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M4 4h12v12H4z"/><path d="M4 10h12M10 4v12" stroke-linecap="round"/></svg>
+          </div>
+          <div>
+            <div class="module-card-title">set_permissions.sh</div>
+            <div class="module-card-file">modules/set_permissions.sh</div>
+          </div>
+        </div>
+        <p class="module-card-desc">Group membership management (<code>usermod -aG</code>, <code>gpasswd -d</code>), POSIX ACL management (<code>setfacl</code>/<code>getfacl</code>), and SGID shared directory setup with default ACL inheritance.</p>
+        <div class="module-card-tags">
+          <span class="module-tag tag-root">root</span>
+          <span class="module-tag tag-dryrun">dry-run</span>
+          <span class="module-tag tag-log">logging</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Feature comparison table -->
+    <div style="margin-top: 48px;">
+      <h3 style="font-size:16px; color:var(--text-bright); margin-bottom: 8px; font-family:var(--font-display);">Module capabilities at a glance</h3>
+      <p style="font-size:13px; color:var(--text-secondary); margin-bottom:0;">✔ Full support &nbsp; ◑ Partial &nbsp; — Not applicable</p>
+    </div>
+    <div class="feature-table-wrap">
+      <table class="feature-table" aria-label="Module feature matrix">
+        <thead>
+          <tr>
+            <th>Module</th>
+            <th>Dry-Run</th>
+            <th>Logging</th>
+            <th>Email</th>
+            <th>CSV Input</th>
+            <th>Root Req.</th>
+            <th>Standalone</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>create_users.sh</td>  <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-no">—</span></td>  <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td></tr>
+          <tr><td>disable_users.sh</td> <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td></tr>
+          <tr><td>delete_users.sh</td>  <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-no">—</span></td>  <td><span class="ft-no">—</span></td>  <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td></tr>
+          <tr><td>audit_report.sh</td>  <td><span class="ft-no">—</span></td>  <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-no">—</span></td>  <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td></tr>
+          <tr><td>ssh_key_manager.sh</td><td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-no">—</span></td>  <td><span class="ft-no">—</span></td>  <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td></tr>
+          <tr><td>expire_accounts.sh</td><td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-no">—</span></td>  <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td></tr>
+          <tr><td>password_policy.sh</td><td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-no">—</span></td>  <td><span class="ft-no">—</span></td>  <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td></tr>
+          <tr><td>set_permissions.sh</td><td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td><td><span class="ft-no">—</span></td>  <td><span class="ft-no">—</span></td>  <td><span class="ft-yes">✔</span></td><td><span class="ft-yes">✔</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════ SECURITY & RELIABILITY ══════════════════════ -->
+<section class="section" id="security" aria-labelledby="security-heading">
+  <div class="section-inner">
+    <p class="section-label">Security &amp; Reliability</p>
+    <h2 class="section-heading" id="security-heading">Built for production from day one</h2>
+    <p class="section-sub">Every design decision prioritises safety, auditability, and reversibility. No surprises in production.</p>
+
+    <div class="security-grid">
+      <div class="security-card pre-reveal">
+        <div class="security-card-icon sec-icon-amber">🧪</div>
+        <h3>Dry-Run Mode</h3>
+        <p>Every module supports <code>--dry-run</code>. All commands are logged as "Would run: …" without executing. Test entire CSV manifests before touching production.</p>
+      </div>
+      <div class="security-card pre-reveal">
+        <div class="security-card-icon sec-icon-cyan">📋</div>
+        <h3>Full Audit Trail</h3>
+        <p>Every action is timestamped and appended to <code>/var/log/usermgmt.log</code> with level, module, and operator (via <code>$SUDO_USER</code>). Weekly HTML reports keep history visible.</p>
+      </div>
+      <div class="security-card pre-reveal">
+        <div class="security-card-icon sec-icon-emerald">🔐</div>
+        <h3>Secure Passwords</h3>
+        <p>Passwords generated via <code>openssl rand</code> guarantee entropy. Minimum 12 chars with diversity padding. Credentials printed once then never stored.</p>
+      </div>
+      <div class="security-card pre-reveal">
+        <div class="security-card-icon sec-icon-blue">🛡</div>
+        <h3>SSH Key Validation</h3>
+        <p>Every key is validated with <code>ssh-keygen -l</code> before deployment. Fingerprints are logged. Duplicate keys skipped automatically. Revoke with one command.</p>
+      </div>
+      <div class="security-card pre-reveal">
+        <div class="security-card-icon sec-icon-purple">📁</div>
+        <h3>Home Backup on Delete</h3>
+        <p>Before any account deletion, the home directory is archived to <code>/var/backup/usermgmt/homes/username_TIMESTAMP.tar.gz</code>. Recoverable for 90 days.</p>
+      </div>
+      <div class="security-card pre-reveal">
+        <div class="security-card-icon sec-icon-red">🚫</div>
+        <h3>Safety Guards</h3>
+        <p>Refuses to delete system accounts (UID &lt; 1000), refuses to delete the current <code>$SUDO_USER</code>, and requires typing the username to confirm destructive actions.</p>
+      </div>
+      <div class="security-card pre-reveal">
+        <div class="security-card-icon sec-icon-cyan">📧</div>
+        <h3>Email Alerts</h3>
+        <p>Configurable email notifications for account disabling and expiry events. Integrates with system <code>mail</code> command — no external dependencies required.</p>
+      </div>
+      <div class="security-card pre-reveal">
+        <div class="security-card-icon sec-icon-emerald">🔄</div>
+        <h3>Log Rotation</h3>
+        <p>Installer configures <code>logrotate</code>: weekly rotation, 90-day retention, compressed archives, <code>dateext</code> naming. Systemd timer or cron for scheduled reports.</p>
+      </div>
+    </div>
+
+    <!-- Requirements sub-section -->
+    <div style="margin-top:56px;">
+      <h3 class="section-heading" style="font-size:clamp(20px,3vw,28px);">Requirements</h3>
+      <p class="section-sub" style="margin-top:8px;">Standard packages on any RHEL 9 / Rocky Linux / CentOS Stream 9 system. No containers, no Python, no external dependencies.</p>
+    </div>
+    <div class="req-grid">
+      <div class="req-card pre-reveal">
+        <div class="req-status">🐧</div>
+        <div>
+          <div class="req-info-name">RHEL 9 / Rocky 9</div>
+          <div class="req-info-note">Primary target — also works on CentOS Stream 9</div>
+        </div>
+      </div>
+      <div class="req-card pre-reveal">
+        <div class="req-status">🔧</div>
+        <div>
+          <div class="req-info-name">shadow-utils</div>
+          <div class="req-info-note">useradd, usermod, userdel, groupadd, chpasswd, chage</div>
+        </div>
+      </div>
+      <div class="req-card pre-reveal">
+        <div class="req-status">🔒</div>
+        <div>
+          <div class="req-info-name">openssl</div>
+          <div class="req-info-note">Cryptographic random password generation</div>
+        </div>
+      </div>
+      <div class="req-card pre-reveal">
+        <div class="req-status">🗝</div>
+        <div>
+          <div class="req-info-name">openssh-server</div>
+          <div class="req-info-note">ssh-keygen for key validation and fingerprinting</div>
+        </div>
+      </div>
+      <div class="req-card pre-reveal">
+        <div class="req-status">📂</div>
+        <div>
+          <div class="req-info-name">acl package</div>
+          <div class="req-info-note">setfacl / getfacl — required for ACL module only</div>
+        </div>
+      </div>
+      <div class="req-card pre-reveal">
+        <div class="req-status">📮</div>
+        <div>
+          <div class="req-info-name">mailx (optional)</div>
+          <div class="req-info-note">Email alerts for disable / expiry events</div>
+        </div>
+      </div>
+      <div class="req-card pre-reveal">
+        <div class="req-status">⚙️</div>
+        <div>
+          <div class="req-info-name">systemd</div>
+          <div class="req-info-note">Weekly audit timer — falls back to cron if absent</div>
+        </div>
+      </div>
+      <div class="req-card pre-reveal">
+        <div class="req-status">📜</div>
+        <div>
+          <div class="req-info-name">bash ≥ 4.2</div>
+          <div class="req-info-note">Associative arrays, [[ ]], BASH_SOURCE — system bash on RHEL 9 qualifies</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- ══════════════════════════ SCRIPTS EXPLORER ════════════════════════════ -->
 <section class="section" id="scripts" aria-labelledby="scripts-heading">
   <div class="section-inner">
@@ -315,6 +725,7 @@
 
     <div class="scripts-layout">
       <div class="scripts-sidebar">
+        <input class="scripts-search" id="scripts-search" type="search" placeholder="Filter scripts…" aria-label="Filter scripts by name"/>
         <div class="script-list" id="script-list" role="tablist" aria-label="Script files"></div>
       </div>
       <div class="script-code-panel" role="tabpanel" aria-label="Script source code">

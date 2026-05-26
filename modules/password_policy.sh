@@ -1,23 +1,29 @@
 #!/usr/bin/env bash
-# modules/password_policy.sh — Enforce password policy via PAM and chage
-# Usage: ./modules/password_policy.sh [--dry-run] [--user USER | --all]
-# Configures: /etc/security/pwquality.conf, /etc/pam.d/system-auth, chage
+# ============================================================
+# modules/password_policy.sh — Enforce password policies
+# Linux User & Access Management Automation  v1.0.0
+# Configures: /etc/security/pwquality.conf and chage aging
+# Usage : ./modules/password_policy.sh [--dry-run] <action>
+# ============================================================
 # shellcheck shell=bash
+# shellcheck source=../config.conf
 set -euo pipefail
 
 _pp_load_config() {
     local cfg
     cfg="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/config.conf"
+    # shellcheck disable=SC1091
     [[ -f "$cfg" ]] && source "$cfg"
 }
 [[ -z "${LOG_FILE:-}" ]] && _pp_load_config
 
 _pp_log() {
     local level="$1"; shift
-    local ts; ts=$(date '+%Y-%m-%d %H:%M:%S')
-    local msg="[$ts] [$level] [PASSWORD_POLICY] $*"
-    echo "$msg"
-    echo "$msg" >> "${LOG_FILE:-/var/log/usermgmt.log}" 2>/dev/null || true
+    local ts msg
+    ts=$(date '+%Y-%m-%d %H:%M:%S')
+    msg="[$ts] [$level] [PASS_POLICY] $*"
+    printf '%s\n' "$msg"
+    printf '%s\n' "$msg" >> "${LOG_FILE:-/var/log/usermgmt.log}" 2>/dev/null || true
 }
 
 _pp_dry() {
@@ -28,69 +34,68 @@ _pp_dry() {
     "$@"
 }
 
-# ── Configure PAM pwquality ───────────────────────────────────────────────────
+# ── Write /etc/security/pwquality.conf ───────────────────────────────────────
 run_configure_pwquality() {
     local pwq_conf="/etc/security/pwquality.conf"
-
-    _pp_log "INFO" "Configuring pwquality: $pwq_conf"
-
-    if [[ "${DRY_RUN:-false}" != "true" ]]; then
-        [[ -f "$pwq_conf" ]] && cp "$pwq_conf" "${pwq_conf}.bak.$(date +%Y%m%d%H%M%S)"
-    fi
-
     local min_len="${PASS_MIN_LEN:-12}"
 
-    local pwq_content="# /etc/security/pwquality.conf
+    _pp_log "INFO" "Configuring PAM pwquality: $pwq_conf (minlen=$min_len)"
+
+    if [[ "${DRY_RUN:-false}" != "true" ]]; then
+        # Back up existing config
+        if [[ -f "$pwq_conf" ]]; then
+            # SC2155 fix: separate declare and assign
+            local bak
+            bak="${pwq_conf}.bak.$(date +%Y%m%d%H%M%S)"
+            cp "$pwq_conf" "$bak"
+            _pp_log "INFO" "Backed up existing config → $bak"
+        fi
+    fi
+
+    # Build config content
+    local pwq_content
+    pwq_content="$(cat <<EOF
+# /etc/security/pwquality.conf
 # Managed by linux-user-access-mgmt — $(date '+%Y-%m-%d %H:%M:%S')
 # Manual edits will be overwritten on next policy run.
 
 # Minimum password length
 minlen = ${min_len}
 
-# Minimum number of character class changes (uppercase, lowercase, digit, special)
+# Require at least one of each character class (negative = minimum count)
+dcredit  = -1      # digits
+ucredit  = -1      # uppercase
+lcredit  = -1      # lowercase
+ocredit  = -1      # special/other characters
+
+# Minimum number of distinct character classes
 minclass = 4
 
-# Maximum number of consecutive same characters
-maxrepeat = 3
-
-# Maximum number of consecutive characters from same class
+# Reject excessively repetitive passwords
+maxrepeat      = 3
 maxclassrepeat = 4
 
-# Ensure at least 1 digit
-dcredit = -1
-
-# Ensure at least 1 uppercase
-ucredit = -1
-
-# Ensure at least 1 lowercase
-lcredit = -1
-
-# Ensure at least 1 special character
-ocredit = -1
-
-# Reject passwords based on dictionary words
-dictcheck = 1
-
-# Reject passwords containing the username
+# Reject passwords based on the user's username
 usercheck = 1
 
-# Number of recent passwords to remember (managed in /etc/security/opasswd)
-# (set in PAM pam_pwhistory.so)
-"
+# Check against a dictionary of common passwords
+dictcheck = 1
+EOF
+)"
 
     if [[ "${DRY_RUN:-false}" == "true" ]]; then
-        _pp_log "DRY" "Would write pwquality config to $pwq_conf"
-        echo "--- Preview ---"
-        echo "$pwq_content"
-        echo "--- End Preview ---"
+        _pp_log "DRY" "Would write pwquality.conf:"
+        printf '%s\n' "$pwq_content" | while IFS= read -r line; do
+            _pp_log "DRY" "  $line"
+        done
     else
-        echo "$pwq_content" > "$pwq_conf"
+        printf '%s\n' "$pwq_content" > "$pwq_conf"
         chmod 644 "$pwq_conf"
-        _pp_log "OK" "pwquality configured: minlen=$min_len dcredit=-1 ucredit=-1 lcredit=-1 ocredit=-1"
+        _pp_log "OK" "pwquality.conf written: minlen=$min_len dcredit=-1 ucredit=-1 lcredit=-1 ocredit=-1"
     fi
 }
 
-# ── Apply chage aging policy to a single user ─────────────────────────────────
+# ── Apply chage aging policy to one user ─────────────────────────────────────
 _pp_apply_aging() {
     local username="${1:?username required}"
 
@@ -99,11 +104,12 @@ _pp_apply_aging() {
         return 1
     fi
 
-    # Skip system users
-    local uid; uid=$(id -u "$username")
-    [[ $uid -lt "${SYSTEM_UID_MIN:-1000}" ]] && return 0
+    # Skip system users silently
+    local uid
+    uid=$(id -u "$username")
+    [[ $uid -lt ${SYSTEM_UID_MIN:-1000} ]] && return 0
 
-    _pp_log "INFO" "Applying aging policy to $username (min=${PASS_MIN_DAYS:-1} max=${PASS_MAX_DAYS:-90} warn=${PASS_WARN_DAYS:-14} inactive=${PASS_INACTIVE_DAYS:-30})"
+    _pp_log "INFO" "Aging policy → $username (min=${PASS_MIN_DAYS:-1} max=${PASS_MAX_DAYS:-90} warn=${PASS_WARN_DAYS:-14} inactive=${PASS_INACTIVE_DAYS:-30})"
 
     _pp_dry chage \
         -m "${PASS_MIN_DAYS:-1}" \
@@ -112,54 +118,54 @@ _pp_apply_aging() {
         -I "${PASS_INACTIVE_DAYS:-30}" \
         "$username"
 
-    _pp_log "OK" "Password aging set for: $username"
+    _pp_log "OK" "Aging applied: $username"
 }
 
-# ── Apply aging policy to all regular users ───────────────────────────────────
+# ── Apply aging to ALL regular users ─────────────────────────────────────────
 run_apply_aging_all() {
-    [[ $EUID -eq 0 ]] || { echo "[ERROR] Must run as root" >&2; exit 1; }
-
-    _pp_log "INFO" "━━━ Applying password aging to all regular users"
+    [[ $EUID -eq 0 ]] || { printf '[ERROR] Must run as root\n' >&2; exit 1; }
+    _pp_log "INFO" "━━━ Applying aging policy to all regular users"
     [[ "${DRY_RUN:-false}" == "true" ]] && _pp_log "WARN" "=== DRY-RUN MODE ==="
 
     local applied=0 skipped=0
 
-    while IFS=: read -r username _ uid _ _ home shell; do
-        [[ $uid -lt "${SYSTEM_UID_MIN:-1000}" ]] && continue
-        [[ "$shell" == "/sbin/nologin" || "$shell" == "/bin/false" ]] && continue
+    while IFS=: read -r username _ uid _ _ _home shell; do
+        [[ $uid -lt ${SYSTEM_UID_MIN:-1000} ]] && continue
+        [[ "$shell" == "/sbin/nologin" || "$shell" == "/bin/false" ]] && {
+            skipped=$(( skipped + 1 ))
+            continue
+        }
         if _pp_apply_aging "$username"; then
-            applied=$((applied+1))
+            applied=$(( applied + 1 ))
         else
-            skipped=$((skipped+1))
+            skipped=$(( skipped + 1 ))
         fi
     done < /etc/passwd
 
-    echo ""
-    echo "╔══════════════════════════════════════════════╗"
-    echo "║       Password Policy Applied                ║"
-    echo "╠══════════════════════════════════════════════╣"
-    printf "║  %-22s : %-18s ║\n" "Users updated" "$applied"
-    printf "║  %-22s : %-18s ║\n" "Skipped" "$skipped"
-    printf "║  %-22s : %-18s ║\n" "Max age (days)" "${PASS_MAX_DAYS:-90}"
-    printf "║  %-22s : %-18s ║\n" "Warn period (days)" "${PASS_WARN_DAYS:-14}"
-    printf "║  %-22s : %-18s ║\n" "Inactive lockout" "${PASS_INACTIVE_DAYS:-30}"
-    echo "╚══════════════════════════════════════════════╝"
-    echo ""
-
+    printf '\n'
+    printf '╔══════════════════════════════════════════════════╗\n'
+    printf '║       Password Aging Policy Applied              ║\n'
+    printf '╠══════════════════════════════════════════════════╣\n'
+    printf '║  %-24s : %-20s ║\n' "Users updated" "$applied"
+    printf '║  %-24s : %-20s ║\n' "Skipped" "$skipped"
+    printf '║  %-24s : %-20s ║\n' "Max age (days)" "${PASS_MAX_DAYS:-90}"
+    printf '║  %-24s : %-20s ║\n' "Warn period (days)" "${PASS_WARN_DAYS:-14}"
+    printf '║  %-24s : %-20s ║\n' "Inactive lockout" "${PASS_INACTIVE_DAYS:-30}"
+    printf '╚══════════════════════════════════════════════════╝\n'
+    printf '\n'
     _pp_log "INFO" "━━━ Policy applied — updated=$applied skipped=$skipped"
 }
 
-# ── Show current chage info for a user ────────────────────────────────────────
+# ── Show current chage info ───────────────────────────────────────────────────
 run_show_aging() {
     local username="${1:?username required}"
-    id "$username" &>/dev/null || { echo "[ERROR] User '$username' not found"; exit 1; }
-    echo ""
-    echo "  Password aging for: $username"
-    echo "  ─────────────────────────────────"
-    chage -l "$username" | while read -r line; do
-        echo "  $line"
+    id "$username" &>/dev/null || { printf '[ERROR] User '\''%s'\'' not found\n' "$username"; exit 1; }
+    printf '\n  Password aging for: %s\n' "$username"
+    printf '  ──────────────────────────────────────────\n'
+    chage -l "$username" | while IFS= read -r line; do
+        printf '  %s\n' "$line"
     done
-    echo ""
+    printf '\n'
 }
 
 # ── Standalone execution ──────────────────────────────────────────────────────
@@ -170,36 +176,56 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            --dry-run)     DRY_RUN=true ;;
-            --all)         ACTION="all" ;;
-            --pwquality)   ACTION="pwquality" ;;
-            --user)        shift; TARGET="${1:?username required}"; ACTION="user" ;;
-            --show)        shift; run_show_aging "${1:?username required}"; exit 0 ;;
+            --dry-run)   DRY_RUN=true ;;
+            --all)       ACTION="all" ;;
+            --pwquality) ACTION="pwquality" ;;
+            --user)
+                shift
+                TARGET="${1:?username required after --user}"
+                ACTION="user"
+                ;;
+            --show)
+                shift
+                run_show_aging "${1:?username required after --show}"
+                exit 0 ;;
             --help|-h)
-                cat <<'EOF'
+                cat <<'HELP'
 Usage: password_policy.sh [--dry-run] <action>
 
 Actions:
-  --pwquality      Configure /etc/security/pwquality.conf
-  --all            Apply chage aging policy to ALL regular users
-  --user <name>    Apply chage aging policy to a specific user
-  --show <name>    Show current password aging for a user
-EOF
+  --pwquality          Configure /etc/security/pwquality.conf (PAM)
+  --all                Apply chage aging to ALL regular users
+  --user <name>        Apply chage aging to a specific user
+  --show <name>        Display current chage settings for a user
+
+Options:
+  --dry-run            Simulate without making changes
+  --help               Show this help
+
+Examples:
+  sudo ./password_policy.sh --pwquality
+  sudo ./password_policy.sh --all
+  sudo ./password_policy.sh --user jsmith
+  ./password_policy.sh --show jsmith
+HELP
                 exit 0 ;;
-            *) echo "[ERROR] Unknown argument: $1" >&2; exit 1 ;;
+            *)
+                printf '[ERROR] Unknown argument: %s\n' "$1" >&2; exit 1 ;;
         esac
         shift
     done
+
+    export DRY_RUN
 
     case "$ACTION" in
         pwquality) run_configure_pwquality ;;
         all)       run_apply_aging_all ;;
         user)
-            [[ $EUID -eq 0 ]] || { echo "[ERROR] Must run as root" >&2; exit 1; }
+            [[ $EUID -eq 0 ]] || { printf '[ERROR] Must run as root\n' >&2; exit 1; }
             _pp_apply_aging "$TARGET"
             ;;
         *)
-            echo "Usage: $0 [--dry-run] --all | --pwquality | --user <name> | --show <name>"
+            printf 'Usage: %s [--dry-run] --all | --pwquality | --user <name> | --show <name>\n' "$0" >&2
             exit 1 ;;
     esac
 fi
