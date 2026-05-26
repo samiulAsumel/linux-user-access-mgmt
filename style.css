@@ -422,7 +422,7 @@ code, pre, .mono { font-family: var(--font-mono); }
   transition: border-color .15s, color .15s;
 }
 .script-code-copy:hover { border-color: var(--cyan-dim); color: var(--cyan); }
-.script-code-body { flex: 1; overflow-y: auto; max-height: 520px; }
+.script-code-body { flex: 1; overflow: visible; }
 .script-code-body pre { margin: 0; padding: 20px; font-size: 12px; line-height: 1.7; }
 .script-code-body code { font-family: var(--font-mono); color: var(--text-primary); white-space: pre; }
 
@@ -777,6 +777,5 @@ footer {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Wider code panel for full source ────────────────────────────────────── */
-.script-code-body { max-height: 640px; }
+/* ── Full source — no scroll, expand to full height ──────────────────────── */
 .script-code-body pre { font-size: 11.5px; }

@@ -303,9 +303,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         codeDisplay.textContent = script.code;
       }
-      // Scroll code panel back to top on each switch
-      const panel = codeDisplay.closest('.script-code-body');
-      if (panel) panel.scrollTop = 0;
+      // Scroll the page to the top of the code panel on script switch
+      const panel = codeDisplay.closest('.script-code-panel');
+      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     const activateBtn = (btn, script) => {
